@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ v1.2-dev</title>
+  <title>歴史 年号クイズ v1.3-dev</title>
   <style>
     body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background:#f6f7fb; margin:0; }
     .wrap { max-width: 760px; margin: 0 auto; padding: 20px; }
@@ -69,6 +69,7 @@
       <div class="row">
         <input id="answer" type="text" inputmode="numeric" placeholder="年号を入力（例：57）" />
         <button id="checkBtn" class="primary">判定</button>
+        <button id="quitBtn" class="danger">途中で終了</button>
       </div>
 
       <div id="message" class="msg"></div>
@@ -115,7 +116,7 @@
 
 <script>
 /* ===============================
-   問題データ（ここはそのまま）
+   問題データ（自由に追加OK）
 ================================ */
 const QUESTIONS = [
   // 古代
@@ -176,16 +177,16 @@ const QUESTIONS = [
 /* ===============================
    状態
 ================================ */
-let pool = [];                 // 今回出題する問題集合（絞り込み後）
-let mode = "all";              // "all" or "wrong"
+let pool = [];
+let mode = "all";          // "all" or "wrong"
 let index = 0;
 let locked = false;
 let correct = 0;
 let wrong = 0;
-let wrongMap = new Map();      // id -> {event, year, lastInput}
+let wrongMap = new Map();
 
-let rangeStart = null;         // number|null
-let rangeEnd = null;           // number|null
+let rangeStart = null;     // number|null
+let rangeEnd = null;       // number|null
 
 /* ===============================
    要素
@@ -213,6 +214,7 @@ const elWrong = document.getElementById("wrong");
 const elProgress = document.getElementById("progress");
 const elPoolSize = document.getElementById("poolSize");
 const elCheckBtn = document.getElementById("checkBtn");
+const quitBtn = document.getElementById("quitBtn");
 
 const rCorrect = document.getElementById("rCorrect");
 const rWrong = document.getElementById("rWrong");
@@ -274,7 +276,6 @@ function updateMeta() {
 }
 
 function showView(which) {
-  // which: "start" | "quiz" | "result"
   startView.classList.add("hidden");
   quizView.classList.add("hidden");
   resultView.classList.add("hidden");
@@ -359,7 +360,6 @@ function finishQuiz() {
   wrongList.innerHTML = "";
   const wrongItems = Array.from(wrongMap.values())
     .filter(x => {
-      // 念のため：今の範囲に合う間違いだけ表示
       if (rangeStart !== null && x.year < rangeStart) return false;
       if (rangeEnd !== null && x.year > rangeEnd) return false;
       return true;
@@ -379,6 +379,15 @@ function finishQuiz() {
   }
 }
 
+function quitQuiz() {
+  // 事故防止：確認
+  const ok = confirm("途中で終了しますか？\n（ここまでの成績を表示します）");
+  if (!ok) return;
+
+  locked = true;
+  finishQuiz();
+}
+
 /* ===============================
    スタート / リスタート
 ================================ */
@@ -386,7 +395,6 @@ function startWithRange(s, e) {
   rangeStart = s;
   rangeEnd = e;
 
-  // まず全問を範囲で絞る
   const filtered = applyRangeFilter(QUESTIONS, rangeStart, rangeEnd);
   if (filtered.length === 0) {
     showView("start");
@@ -408,12 +416,10 @@ function startWithRange(s, e) {
 }
 
 function restartSameRangeAll() {
-  // 同じ範囲でもう一回
   startWithRange(rangeStart, rangeEnd);
 }
 
 function startWrongOnly() {
-  // 間違えた問題だけ（範囲内）
   const wrongItems = Array.from(wrongMap.values());
   if (wrongItems.length === 0) return;
 
@@ -429,14 +435,12 @@ function startWrongOnly() {
   locked = false;
   correct = 0;
   wrong = 0;
-  // wrongMapは継続（正解したらdelete）
   showView("quiz");
   showQuestion();
 }
 
 function backToStart() {
   showView("start");
-  // 範囲バッジ表示更新
   rangeLabelEl.textContent = formatRangeLabel(rangeStart, rangeEnd);
   totalQuestionsEl.textContent = String(QUESTIONS.length);
 }
@@ -445,6 +449,8 @@ function backToStart() {
    イベント
 ================================ */
 elCheckBtn.addEventListener("click", checkAnswer);
+quitBtn.addEventListener("click", quitQuiz);
+
 document.addEventListener("keydown", e => {
   // クイズ画面のみEnterで判定
   if (quizView.classList.contains("hidden")) return;
@@ -455,12 +461,10 @@ startBtn.addEventListener("click", () => {
   const s = normalizeYear(startYearEl.value);
   const e = normalizeYear(endYearEl.value);
 
-  // 両方空欄はOK（範囲なし）
   if (s !== null && e !== null && s > e) {
     showStartMessage("ng", "開始年が終了年より大きいです。");
     return;
   }
-
   startWithRange(s, e);
 });
 
