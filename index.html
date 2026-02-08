@@ -193,7 +193,7 @@
         </div>
 
         <div class="row" style="gap:8px;">
-          <span class="badge" id="streakBadge">連続正解：-</span>
+          <span class="badge" id="streakBadge">連続成功日：-</span>
           <span class="badge" id="totalBadge">累計：-</span>
         </div>
       </div>
@@ -480,7 +480,22 @@ function beep(ok){
 }
 
 function ensureStat(qid){
-  if(!stats[qid]) stats[qid] = { attempt:0, correct:0, wrong:0, streak:0 };
+  if(!stats[qid]){
+    stats[qid] = {
+      attempt:0, correct:0, wrong:0,
+      streak:0,          // 連続成功日数（0-4）
+      statusLevel:0,     // 0:未判定, 1:調合中, 2:習得中, 3:安定以上, 4:マスター
+      dayKey:null,
+      dayHadCorrect:false,
+      dayHadWrong:false,
+    };
+  }
+  if(!Number.isInteger(stats[qid].statusLevel)){
+    const guessed = clamp(stats[qid].streak || 0, 0, 4);
+    stats[qid].statusLevel = (stats[qid].attempt || 0) > 0 ? Math.max(1, guessed) : 0;
+  }
+  if(typeof stats[qid].dayHadCorrect !== "boolean") stats[qid].dayHadCorrect = false;
+  if(typeof stats[qid].dayHadWrong !== "boolean") stats[qid].dayHadWrong = false;
   return stats[qid];
 }
 function rateOf(st){
@@ -489,15 +504,68 @@ function rateOf(st){
 }
 function masteryInfo(qid){
   const st = ensureStat(qid);
-  if(st.attempt < 3){
+  if(st.attempt < 1){
     return {icon:"❔", label:"未判定", cls:"m-unk", detail:"データ不足"};
   }
-  const r = rateOf(st);
-  const pct = Math.round(r*100);
-  if(r >= 0.95 && st.streak >= 3) return {icon:"🏆", label:`マスター ${pct}%`, cls:"m-max", detail:`${st.correct}/${st.attempt}`};
-  if(r >= 0.80) return {icon:"✨", label:`安定 ${pct}%`, cls:"m-hi", detail:`${st.correct}/${st.attempt}`};
-  if(r >= 0.60) return {icon:"🪄", label:`習得中 ${pct}%`, cls:"m-mid", detail:`${st.correct}/${st.attempt}`};
-  return {icon:"🧪", label:`調合中 ${pct}%`, cls:"m-low", detail:`${st.correct}/${st.attempt}`};
+  const level = effectiveStatusLevel(st);
+  if(level >= 4) return {icon:"🏆", label:"マスター", cls:"m-max", detail:`連続成功 ${Math.min(4, st.streak)}日`};
+  if(level === 3) return {icon:"✨", label:"安定以上", cls:"m-hi", detail:`連続成功 ${Math.min(4, st.streak)}日`};
+  if(level === 2) return {icon:"🪄", label:"習得中", cls:"m-mid", detail:`連続成功 ${Math.min(4, st.streak)}日`};
+  return {icon:"🧪", label:"調合中", cls:"m-low", detail:`連続成功 ${Math.min(4, st.streak)}日`};
+}
+
+function getTodayKey(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,"0");
+  const d = String(now.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+
+function promoteOneStep(st){
+  st.streak = clamp((st.streak || 0) + 1, 0, 4);
+  st.statusLevel = clamp((st.statusLevel || 0) + 1, 1, 4);
+}
+
+function demoteOneStep(st){
+  st.streak = Math.max(0, (st.streak || 0) - 1);
+  st.statusLevel = Math.max(1, (st.statusLevel || 1) - 1);
+}
+
+function finalizeOneDay(st){
+  if(st.dayHadCorrect){
+    promoteOneStep(st);
+  }else if(st.dayHadWrong){
+    demoteOneStep(st);
+  }
+}
+
+function rollAndPrepareDay(st){
+  const today = getTodayKey();
+  if(st.dayKey && st.dayKey !== today){
+    finalizeOneDay(st);
+    st.dayHadCorrect = false;
+    st.dayHadWrong = false;
+  }
+  if(!st.dayKey || st.dayKey !== today){
+    st.dayKey = today;
+  }
+}
+
+function effectiveStatusLevel(st){
+  rollAndPrepareDay(st);
+  let level = st.statusLevel || 0;
+  if(st.dayHadCorrect){
+    level = clamp(level + 1, 1, 4);
+  }
+  return level;
+}
+
+function normalizeAllStatsByDay(){
+  for(const q of ALL){
+    const st = ensureStat(q.id);
+    rollAndPrepareDay(st);
+  }
 }
 
 /* ===============================
@@ -678,7 +746,7 @@ function updateBanner(){
   $("overallTitleBadge").textContent = `総合：${overallTitleText(level)}`;
   $("overallRateBadge").textContent  = `正答率：${rate}%`;
 
-  $("streakBadge").textContent = `連続正解：${Math.max(agg.maxStreak, all.maxStreak)}`;
+  $("streakBadge").textContent = `連続成功日：${Math.max(agg.maxStreak, all.maxStreak)}`;
 
   $("totalBadge").textContent = `累計：評価 ${c}/${a}（attempt≥3） / 全体 ${cAll}/${aAll} / マスター ${mastered}/${ALL.length}`;
 
@@ -759,18 +827,19 @@ function checkAnswer(){
   locked = true;
 
   const st = ensureStat(q.id);
+  rollAndPrepareDay(st);
   st.attempt += 1;
 
   if(y === q.year){
     st.correct += 1;
-    st.streak += 1;
+    st.dayHadCorrect = true;
     correct++;
     wrongMap.delete(q.id);
     beep(true);
     setMessage("ok", `○ 正解！ <b>${q.year}年</b>`);
   }else{
     st.wrong += 1;
-    st.streak = 0;
+    st.dayHadWrong = true;
     wrong++;
     wrongMap.set(q.id, { id:q.id, event:q.event, year:q.year, lastInput:y });
     beep(false);
@@ -897,7 +966,7 @@ function renderNotebook(){
             <div class="qtitle">${mi.icon} <span class="mono">[${q.year}]</span> ${q.event}</div>
             <div class="qsub">
               得意度：<span class="chip ${mi.cls}" style="margin-left:6px;">${mi.icon} ${mi.label}</span>
-              <span class="muted mono" style="margin-left:8px;">出題 ${st.attempt}回 / 正解 ${st.correct}回 / 連続正解 ${st.streak}</span>
+              <span class="muted mono" style="margin-left:8px;">出題 ${st.attempt}回 / 正解 ${st.correct}回 / 連続成功日 ${st.streak}</span>
             </div>
           </div>
           <div class="right">
@@ -1100,6 +1169,9 @@ $("totalCount").textContent = String(ALL.length);
 $("randomToggle").checked = useRandom;
 $("soundToggle").checked  = soundOn;
 $("questionCount").value = questionCount ?? "";
+
+normalizeAllStatsByDay();
+saveStats(stats);
 
 updateBanner();
 showView("startView");
