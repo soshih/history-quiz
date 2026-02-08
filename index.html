@@ -199,7 +199,7 @@
       </div>
 
       <div class="sub" style="margin-top:10px;">
-        ※総合Lvは「3回以上練習した問題（attempt ≥ 3）」だけで計算しています（v3.2：上がり方をゆっくりに調整）
+        ※総合Lvは「マスター（🏆）」になった問題数に応じて上がります。全問題マスターでLv30です。
       </div>
     </div>
 
@@ -529,28 +529,29 @@ function overallAggregateAll(){
 }
 
 /* ======================================================
-   ★ v3.2：レベル計算を「ゆっくり上がる」方式へ
-   - attempt>=3 の評価対象だけで計算
-   - a=0（評価対象ゼロ）ならLv1固定
-   - 正答率 × 経験値（a/30）でスコア化
-   - 連続正解ボーナスは控えめ（最大+1）
+   ★ v3.3：レベル計算を「マスター数ベース」に変更
+   - 各問題の得意度が「🏆 マスター」の件数で計算
+   - 1問もマスターがなければLv1
+   - 全問題マスターで必ずLv30
 ====================================================== */
 function computeOverallLevel(){
-  const agg = overallAggregate();
-  const a = agg.totalAttempt;
-  const c = agg.totalCorrect;
+  const total = ALL.length;
+  if(total === 0) return 1;
 
-  if(a === 0) return 1; // 評価対象がないならLv1固定
+  const mastered = countMastered();
 
-  const rate = c / a;               // 0..1
-  const exp  = Math.min(1, a / 30); // 30回で1.0
-  const score = rate * exp;         // 0..1
-
-  let level = 1 + Math.floor(score * 29);
-
-  if(agg.maxStreak >= 5) level += 1; // 控えめ
+  const ratio = mastered / total;
+  const level = 1 + Math.floor(ratio * 29);
 
   return clamp(level, 1, 30);
+}
+
+function countMastered(){
+  let mastered = 0;
+  for(const q of ALL){
+    if(masteryInfo(q.id).icon === "🏆") mastered++;
+  }
+  return mastered;
 }
 
 function overallTitleText(level){
@@ -661,14 +662,14 @@ function updateBanner(){
 
   const aAll = all.totalAttempt;
   const cAll = all.totalCorrect;
+  const mastered = countMastered();
 
   $("overallTitleBadge").textContent = `総合：${overallTitleText(level)}`;
   $("overallRateBadge").textContent  = `正答率：${rate}%`;
 
   $("streakBadge").textContent = `連続正解：${Math.max(agg.maxStreak, all.maxStreak)}`;
 
-  // ★ここ：評価対象/全体を併記（原因切り分けにもなる）
-  $("totalBadge").textContent = `累計：評価 ${c}/${a}（attempt≥3） / 全体 ${cAll}/${aAll}`;
+  $("totalBadge").textContent = `累計：評価 ${c}/${a}（attempt≥3） / 全体 ${cAll}/${aAll} / マスター ${mastered}/${ALL.length}`;
 
   for(let i=1;i<=30;i++){
     const el = $("seg"+i);
@@ -848,9 +849,10 @@ function renderNotebook(){
   const all = overallAggregateAll();
   const level = computeOverallLevel();
   const rate = agg.totalAttempt ? Math.round((agg.totalCorrect/agg.totalAttempt)*100) : 0;
+  const mastered = countMastered();
 
   $("nbSummaryChip").textContent =
-    `総合 ${overallTitleText(level)} / 正答率 ${rate}% / 評価 ${agg.totalCorrect}/${agg.totalAttempt}（対象${agg.counted}問） / 全体 ${all.totalCorrect}/${all.totalAttempt}（触った${all.touched}問）`;
+    `総合 ${overallTitleText(level)} / 正答率 ${rate}% / 評価 ${agg.totalCorrect}/${agg.totalAttempt}（対象${agg.counted}問） / 全体 ${all.totalCorrect}/${all.totalAttempt}（触った${all.touched}問） / マスター ${mastered}/${ALL.length}`;
 
   const table = $("nbTable");
   table.innerHTML = "";
