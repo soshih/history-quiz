@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ v1.3-dev</title>
+  <title>歴史 年号クイズ v1.4-dev</title>
   <style>
     body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background:#f6f7fb; margin:0; }
     .wrap { max-width: 760px; margin: 0 auto; padding: 20px; }
@@ -46,7 +46,7 @@
           <button id="startBtn" class="primary">スタート</button>
           <button id="startAllRangeBtn" class="ghost">範囲なしでスタート</button>
         </div>
-        <div class="small">空欄OK：開始だけ / 終了だけでも絞れます（全角数字もOK）。</div>
+        <div class="small">空欄OK：開始だけ / 終了だけでも絞れます（全角数字OK）。</div>
       </div>
 
       <div id="startMessage" class="msg"></div>
@@ -116,10 +116,9 @@
 
 <script>
 /* ===============================
-   問題データ（自由に追加OK）
+   問題データ
 ================================ */
 const QUESTIONS = [
-  // 古代
   { id: "q001", year: 57,  event: "倭の奴国の王が後漢に使いを送る" },
   { id: "q002", year: 239, event: "卑弥呼が魏に使いを送る" },
   { id: "q003", year: 538, event: "百済から仏教の伝来" },
@@ -145,8 +144,6 @@ const QUESTIONS = [
   { id: "q023", year: 866, event: "藤原良房が摂政となる" },
   { id: "q024", year: 887, event: "藤原基経が関白となる" },
   { id: "q025", year: 894, event: "遣唐使の停止" },
-
-  // 中世
   { id: "q026", year: 939, event: "平将門の乱がおこる" },
   { id: "q027", year: 939, event: "藤原純友の乱がおこる" },
   { id: "q028", year: 988, event: "尾張国の国司が訴えられる" },
@@ -178,15 +175,14 @@ const QUESTIONS = [
    状態
 ================================ */
 let pool = [];
-let mode = "all";          // "all" or "wrong"
+let mode = "all";
 let index = 0;
 let locked = false;
 let correct = 0;
 let wrong = 0;
 let wrongMap = new Map();
-
-let rangeStart = null;     // number|null
-let rangeEnd = null;       // number|null
+let rangeStart = null;
+let rangeEnd = null;
 
 /* ===============================
    要素
@@ -194,7 +190,6 @@ let rangeEnd = null;       // number|null
 const startView = document.getElementById("startView");
 const quizView = document.getElementById("quizView");
 const resultView = document.getElementById("resultView");
-
 const startYearEl = document.getElementById("startYear");
 const endYearEl = document.getElementById("endYear");
 const startBtn = document.getElementById("startBtn");
@@ -202,10 +197,8 @@ const startAllRangeBtn = document.getElementById("startAllRangeBtn");
 const startMessage = document.getElementById("startMessage");
 const totalQuestionsEl = document.getElementById("totalQuestions");
 const rangeLabelEl = document.getElementById("rangeLabel");
-
 const modeBadge = document.getElementById("modeBadge");
 const rangeBadge = document.getElementById("rangeBadge");
-
 const elEvent = document.getElementById("event");
 const elAnswer = document.getElementById("answer");
 const elMsg = document.getElementById("message");
@@ -215,7 +208,6 @@ const elProgress = document.getElementById("progress");
 const elPoolSize = document.getElementById("poolSize");
 const elCheckBtn = document.getElementById("checkBtn");
 const quitBtn = document.getElementById("quitBtn");
-
 const rCorrect = document.getElementById("rCorrect");
 const rWrong = document.getElementById("rWrong");
 const rRate = document.getElementById("rRate");
@@ -223,7 +215,6 @@ const rTotal = document.getElementById("rTotal");
 const rRange = document.getElementById("rRange");
 const wrongList = document.getElementById("wrongList");
 const wrongEmpty = document.getElementById("wrongEmpty");
-
 const retryWrongBtn = document.getElementById("retryWrongBtn");
 const retryAllBtn = document.getElementById("retryAllBtn");
 const backToStartBtn = document.getElementById("backToStartBtn");
@@ -239,24 +230,11 @@ function normalizeYear(input) {
   if (!digits) return null;
   return Number(digits);
 }
-
 function formatRangeLabel(s, e) {
   const a = (s === null) ? "指定なし" : String(s);
   const b = (e === null) ? "指定なし" : String(e);
   return `${a}〜${b}`;
 }
-
-function showStartMessage(type, text) {
-  startMessage.style.display = "block";
-  startMessage.className = "msg " + (type === "ok" ? "ok" : "ng");
-  startMessage.textContent = text;
-}
-function clearStartMessage() {
-  startMessage.style.display = "none";
-  startMessage.className = "msg";
-  startMessage.textContent = "";
-}
-
 function setMessage(type, html) {
   elMsg.style.display = "block";
   elMsg.className = "msg " + (type === "ok" ? "ok" : "ng");
@@ -267,14 +245,6 @@ function clearMessage() {
   elMsg.className = "msg";
   elMsg.innerHTML = "";
 }
-
-function updateMeta() {
-  elCorrect.textContent = String(correct);
-  elWrong.textContent = String(wrong);
-  elProgress.textContent = `${index + 1} / ${pool.length}`;
-  elPoolSize.textContent = String(pool.length);
-}
-
 function showView(which) {
   startView.classList.add("hidden");
   quizView.classList.add("hidden");
@@ -282,6 +252,22 @@ function showView(which) {
   if (which === "start") startView.classList.remove("hidden");
   if (which === "quiz") quizView.classList.remove("hidden");
   if (which === "result") resultView.classList.remove("hidden");
+}
+function updateMeta() {
+  elCorrect.textContent = String(correct);
+  elWrong.textContent = String(wrong);
+  elProgress.textContent = `${index + 1} / ${pool.length}`;
+  elPoolSize.textContent = String(pool.length);
+}
+
+/* ★ ランダム化（Fisher–Yates） */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 function applyRangeFilter(items, s, e) {
@@ -300,33 +286,23 @@ function showQuestion() {
     finishQuiz();
     return;
   }
-
   const q = pool[index];
   modeBadge.textContent = (mode === "wrong") ? "復習（間違いのみ）" : "全問";
   rangeBadge.textContent = `範囲: ${formatRangeLabel(rangeStart, rangeEnd)}`;
-
   elEvent.textContent = q.event;
   elAnswer.value = "";
   elAnswer.focus();
   clearMessage();
-
   locked = false;
   updateMeta();
 }
 
 function checkAnswer() {
   if (locked) return;
-
   const q = pool[index];
   const y = normalizeYear(elAnswer.value);
-
-  if (y === null) {
-    setMessage("ng", "数字を入力してください（例：57）");
-    return;
-  }
-
+  if (y === null) { setMessage("ng", "数字を入力してください（例：57）"); return; }
   locked = true;
-
   if (y === q.year) {
     correct++;
     setMessage("ok", `○ 正解！ <b>${q.year}年</b>`);
@@ -336,21 +312,14 @@ function checkAnswer() {
     setMessage("ng", `× 不正解。正解は <b>${q.year}年</b> です。`);
     wrongMap.set(q.id, { id: q.id, event: q.event, year: q.year, lastInput: y });
   }
-
   updateMeta();
-
-  setTimeout(() => {
-    index++;
-    showQuestion();
-  }, 1200);
+  setTimeout(() => { index++; showQuestion(); }, 1200);
 }
 
 function finishQuiz() {
   showView("result");
-
   const total = pool.length;
   const rate = total === 0 ? 0 : Math.round((correct / total) * 100);
-
   rCorrect.textContent = String(correct);
   rWrong.textContent = String(wrong);
   rRate.textContent = String(rate);
@@ -358,13 +327,11 @@ function finishQuiz() {
   rRange.textContent = formatRangeLabel(rangeStart, rangeEnd);
 
   wrongList.innerHTML = "";
-  const wrongItems = Array.from(wrongMap.values())
-    .filter(x => {
-      if (rangeStart !== null && x.year < rangeStart) return false;
-      if (rangeEnd !== null && x.year > rangeEnd) return false;
-      return true;
-    });
-
+  const wrongItems = Array.from(wrongMap.values()).filter(x => {
+    if (rangeStart !== null && x.year < rangeStart) return false;
+    if (rangeEnd !== null && x.year > rangeEnd) return false;
+    return true;
+  });
   if (wrongItems.length === 0) {
     wrongEmpty.style.display = "block";
     retryWrongBtn.disabled = true;
@@ -380,61 +347,46 @@ function finishQuiz() {
 }
 
 function quitQuiz() {
-  // 事故防止：確認
-  const ok = confirm("途中で終了しますか？\n（ここまでの成績を表示します）");
-  if (!ok) return;
-
+  if (!confirm("途中で終了しますか？\n（ここまでの成績を表示します）")) return;
   locked = true;
   finishQuiz();
 }
 
 /* ===============================
-   スタート / リスタート
+   スタート / リスタート（★毎回シャッフル）
 ================================ */
 function startWithRange(s, e) {
-  rangeStart = s;
-  rangeEnd = e;
-
+  rangeStart = s; rangeEnd = e;
   const filtered = applyRangeFilter(QUESTIONS, rangeStart, rangeEnd);
   if (filtered.length === 0) {
     showView("start");
-    showStartMessage("ng", "この範囲に該当する問題がありません。範囲を広げてください。");
+    startMessage.style.display = "block";
+    startMessage.className = "msg ng";
+    startMessage.textContent = "この範囲に該当する問題がありません。";
     return;
   }
-
   mode = "all";
-  pool = filtered;
-  index = 0;
-  locked = false;
-  correct = 0;
-  wrong = 0;
-  wrongMap = new Map();
-
-  clearStartMessage();
+  pool = shuffle(filtered);      // ★ ランダム
+  index = 0; locked = false; correct = 0; wrong = 0; wrongMap = new Map();
+  startMessage.style.display = "none";
   showView("quiz");
   showQuestion();
 }
 
 function restartSameRangeAll() {
-  startWithRange(rangeStart, rangeEnd);
+  startWithRange(rangeStart, rangeEnd); // ★ 再シャッフル
 }
 
 function startWrongOnly() {
   const wrongItems = Array.from(wrongMap.values());
   if (wrongItems.length === 0) return;
-
   const wrongIds = new Set(wrongItems.map(x => x.id));
   const candidates = QUESTIONS.filter(q => wrongIds.has(q.id));
   const filtered = applyRangeFilter(candidates, rangeStart, rangeEnd);
-
   if (filtered.length === 0) return;
-
   mode = "wrong";
-  pool = filtered;
-  index = 0;
-  locked = false;
-  correct = 0;
-  wrong = 0;
+  pool = shuffle(filtered);      // ★ ランダム
+  index = 0; locked = false; correct = 0; wrong = 0;
   showView("quiz");
   showQuestion();
 }
@@ -450,44 +402,33 @@ function backToStart() {
 ================================ */
 elCheckBtn.addEventListener("click", checkAnswer);
 quitBtn.addEventListener("click", quitQuiz);
-
 document.addEventListener("keydown", e => {
-  // クイズ画面のみEnterで判定
   if (quizView.classList.contains("hidden")) return;
   if (e.key === "Enter") checkAnswer();
 });
-
 startBtn.addEventListener("click", () => {
   const s = normalizeYear(startYearEl.value);
   const e = normalizeYear(endYearEl.value);
-
   if (s !== null && e !== null && s > e) {
-    showStartMessage("ng", "開始年が終了年より大きいです。");
+    startMessage.style.display = "block";
+    startMessage.className = "msg ng";
+    startMessage.textContent = "開始年が終了年より大きいです。";
     return;
   }
   startWithRange(s, e);
 });
-
 startAllRangeBtn.addEventListener("click", () => {
-  startYearEl.value = "";
-  endYearEl.value = "";
+  startYearEl.value = ""; endYearEl.value = "";
   startWithRange(null, null);
 });
-
 retryAllBtn.addEventListener("click", restartSameRangeAll);
 retryWrongBtn.addEventListener("click", startWrongOnly);
 backToStartBtn.addEventListener("click", backToStart);
-
 resetScoreBtn.addEventListener("click", () => {
-  // 完全リセットしてスタート画面へ
-  correct = 0;
-  wrong = 0;
-  wrongMap = new Map();
-  rangeStart = null;
-  rangeEnd = null;
-  startYearEl.value = "";
-  endYearEl.value = "";
-  clearStartMessage();
+  correct = 0; wrong = 0; wrongMap = new Map();
+  rangeStart = null; rangeEnd = null;
+  startYearEl.value = ""; endYearEl.value = "";
+  startMessage.style.display = "none";
   totalQuestionsEl.textContent = String(QUESTIONS.length);
   rangeLabelEl.textContent = "-";
   showView("start");
