@@ -179,11 +179,13 @@
       85%{transform:translate(-50%,0) scale(1);opacity:1}
       100%{transform:translate(-50%,-10px) scale(.98);opacity:0}
     }
+
   </style>
 </head>
 <body>
 <canvas id="fxCanvas" class="fx-canvas" aria-hidden="true"></canvas>
 <div id="levelupToast" class="levelup-toast" aria-live="polite" aria-atomic="true"></div>
+
 <div class="wrap">
   <div class="card">
 
@@ -468,6 +470,7 @@ let lastOverallLevel = null;
 let confettiTimer = null;
 let levelToastTimer = null;
 
+
 const $ = id => document.getElementById(id);
 
 function normalizeYear(v){
@@ -711,6 +714,7 @@ function showLevelUpToast(prevLevel, nextLevel){
   }, 2200);
 }
 
+
 function updateBanner(){
   const agg = overallAggregate();
   const all = overallAggregateAll();
@@ -719,6 +723,7 @@ function updateBanner(){
   if(lastOverallLevel !== null && level > lastOverallLevel){
     runLevelUpConfetti();
     showLevelUpToast(lastOverallLevel, level);
+
   }
   lastOverallLevel = level;
 
