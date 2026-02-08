@@ -147,9 +147,11 @@
     .qsub{font-size:12px;color:var(--muted);margin-top:4px}
     .right{display:flex;justify-content:flex-end}
     .mono{font-variant-numeric:tabular-nums}
+    .fx-canvas{position:fixed;inset:0;pointer-events:none;z-index:9999;}
   </style>
 </head>
 <body>
+<canvas id="fxCanvas" class="fx-canvas" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="card">
 
@@ -430,6 +432,8 @@ let useRandom = prefs.useRandom ?? true;
 let soundOn   = prefs.soundOn ?? true;
 
 let currentBaseIds = null;
+let lastOverallLevel = null;
+let confettiTimer = null;
 
 const $ = id => document.getElementById(id);
 
@@ -554,11 +558,102 @@ function overallTitleText(level){
   return `Lv${level} ${t.icon}「${t.title}」`;
 }
 
+function runLevelUpConfetti(){
+  const canvas = $("fxCanvas");
+  if(!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  if(!ctx) return;
+
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if(confettiTimer){
+    cancelAnimationFrame(confettiTimer);
+    confettiTimer = null;
+  }
+
+  const colors = ["#ffd54f", "#7aa2ff", "#ff6fa1", "#74e0b0", "#ffffff"];
+  const pieces = [];
+  const count = 150;
+
+  for(let i=0;i<count;i++){
+    const side = i % 2 === 0 ? 0 : w;
+    const spread = Math.random() * 220 + 40;
+    const fromLeft = side === 0;
+
+    pieces.push({
+      x: side + (fromLeft ? Math.random() * spread : -Math.random() * spread),
+      y: h * 0.20 + (Math.random() * 80 - 40),
+      vx: (fromLeft ? 1 : -1) * (Math.random() * 4 + 2),
+      vy: -(Math.random() * 8 + 8),
+      g: Math.random() * 0.20 + 0.20,
+      size: Math.random() * 8 + 4,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.25,
+      life: Math.random() * 0.4 + 0.7,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      shape: Math.random() < 0.5 ? "rect" : "circle",
+    });
+  }
+
+  const startedAt = performance.now();
+  const duration = 1400;
+
+  const draw = now => {
+    const t = now - startedAt;
+    ctx.clearRect(0, 0, w, h);
+
+    for(const p of pieces){
+      if(p.life <= 0) continue;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.g;
+      p.rot += p.vr;
+      p.life -= 0.012;
+
+      const alpha = Math.max(0, p.life);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      if(p.shape === "rect"){
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.66);
+      }else{
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size*0.35, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if(t < duration){
+      confettiTimer = requestAnimationFrame(draw);
+    }else{
+      ctx.clearRect(0, 0, w, h);
+      confettiTimer = null;
+    }
+  };
+
+  confettiTimer = requestAnimationFrame(draw);
+}
+
 function updateBanner(){
   const agg = overallAggregate();
   const all = overallAggregateAll();
 
   const level = computeOverallLevel();
+  if(lastOverallLevel !== null && level > lastOverallLevel){
+    runLevelUpConfetti();
+  }
+  lastOverallLevel = level;
 
   const a = agg.totalAttempt;
   const c = agg.totalCorrect;
