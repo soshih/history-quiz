@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ v2.0</title>
+  <title>歴史 年号クイズ v2.1</title>
   <style>
     body {
       font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
@@ -111,12 +111,17 @@
   </div>
 </div>
 
-<!-- ===== 問題データ ===== -->
+<!-- ===== 問題データ（別ファイル）===== -->
 <script src="./questions.js"></script>
 
 <script>
+/* ========= データ ========= */
+const ALL = window.QUESTIONS || [];
+if (!Array.isArray(ALL) || ALL.length === 0) {
+  alert("questions.js が読み込めていません。index.html と同じ場所に questions.js があるか確認してください。");
+}
+
 /* ========= 状態 ========= */
-const ALL = window.QUESTIONS;
 let pool = [];
 let index = 0;
 let correct = 0;
@@ -127,129 +132,211 @@ let useRandom = true;
 
 /* ========= ユーティリティ ========= */
 const $ = id => document.getElementById(id);
-const normalize = v => {
+
+function normalize(v){
   if(!v) return null;
   const h = String(v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0));
   const d = h.replace(/[^0-9]/g,"");
   return d ? Number(d) : null;
-};
-const shuffle = a => {
+}
+
+function shuffle(a){
   const b = a.slice();
   for(let i=b.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
     [b[i],b[j]]=[b[j],b[i]];
   }
   return b;
-};
+}
 
-/* ========= 出題準備 ========= */
 function buildPool(base){
   let arr = base.slice();
-  arr = useRandom ? shuffle(arr) : arr.sort((a,b)=>a.year-b.year);
+  if (useRandom) arr = shuffle(arr);
+  else arr.sort((a,b)=>a.year-b.year);
   return arr;
 }
 
-/* ========= クイズ進行 ========= */
-function showQuestion(){
-  if(index>=pool.length){ finish(); return; }
-  $("event").textContent = pool[index].event;
-  $("answer").value="";
-  $("answer").focus();
-  $("message").style.display="none";
-  locked=false;
-  $("progress").textContent = `${index+1} / ${pool.length}`;
+/* ★ 画面のメタ表示を更新（今回の修正ポイント） */
+function updateQuizMeta(){
+  $("correct").textContent = String(correct);
+  $("wrong").textContent = String(wrong);
+  $("progress").textContent = pool.length ? `${index + 1} / ${pool.length}` : "-";
   $("orderBadge").textContent = useRandom ? "ランダム" : "年号順";
 }
-function check(){
-  if(locked) return;
-  const q = pool[index];
-  const y = normalize($("answer").value);
-  if(y===null){
-    showMsg("ng","数字を入力してください");
-    return;
-  }
-  locked=true;
-  if(y===q.year){
-    correct++; wrongMap.delete(q.id);
-    showMsg("ok",`○ 正解！ ${q.year}年`);
-  }else{
-    wrong++; wrongMap.set(q.id,{...q,last:y});
-    showMsg("ng",`× 不正解。正解は ${q.year}年`);
-  }
-  setTimeout(()=>{ index++; showQuestion(); },1000);
-}
+
 function showMsg(type,text){
   const m=$("message");
   m.className="msg "+(type==="ok"?"ok":"ng");
   m.textContent=text;
   m.style.display="block";
 }
-function finish(){
+
+/* ========= 画面切り替え ========= */
+function showStart(){
+  $("startView").classList.remove("hidden");
+  $("quizView").classList.add("hidden");
+  $("resultView").classList.add("hidden");
+}
+function showQuiz(){
+  $("startView").classList.add("hidden");
+  $("quizView").classList.remove("hidden");
+  $("resultView").classList.add("hidden");
+}
+function showResult(){
+  $("startView").classList.add("hidden");
   $("quizView").classList.add("hidden");
   $("resultView").classList.remove("hidden");
-  $("rCorrect").textContent=correct;
-  $("rWrong").textContent=wrong;
-  $("rTotal").textContent=pool.length;
-  $("rRate").textContent=Math.round(correct/pool.length*100)||0;
+}
 
-  const list=$("wrongList");
-  list.innerHTML="";
-  const ws=[...wrongMap.values()];
-  $("noWrong").style.display = ws.length ? "none":"block";
+/* ========= クイズ進行 ========= */
+function showQuestion(){
+  if(index >= pool.length){ finish(); return; }
+
+  $("event").textContent = pool[index].event;
+  $("answer").value = "";
+  $("answer").focus();
+  $("message").style.display="none";
+  locked = false;
+
+  updateQuizMeta();
+}
+
+function check(){
+  if(locked) return;
+
+  const q = pool[index];
+  const y = normalize($("answer").value);
+
+  if(y === null){
+    showMsg("ng","数字を入力してください");
+    return;
+  }
+
+  locked = true;
+
+  if(y === q.year){
+    correct++;
+    wrongMap.delete(q.id);
+    showMsg("ok",`○ 正解！ ${q.year}年`);
+  }else{
+    wrong++;
+    wrongMap.set(q.id,{...q,last:y});
+    showMsg("ng",`× 不正解。正解は ${q.year}年`);
+  }
+
+  // ★ 判定直後にカウンタを更新（これが無かったため途中で増えなかった）
+  updateQuizMeta();
+
+  setTimeout(()=>{
+    index++;
+    showQuestion();
+  }, 1000);
+}
+
+function finish(){
+  showResult();
+
+  $("rCorrect").textContent = String(correct);
+  $("rWrong").textContent = String(wrong);
+  $("rTotal").textContent = String(pool.length);
+  $("rRate").textContent = pool.length ? String(Math.round(correct / pool.length * 100)) : "0";
+
+  const list = $("wrongList");
+  list.innerHTML = "";
+
+  const ws = [...wrongMap.values()];
+  $("noWrong").style.display = ws.length ? "none" : "block";
+
   ws.forEach(w=>{
-    const li=document.createElement("li");
-    li.textContent=`${w.event} → ${w.year}年（入力:${w.last}）`;
+    const li = document.createElement("li");
+    li.textContent = `${w.event} → ${w.year}年（入力:${w.last}）`;
     list.appendChild(li);
   });
 }
+
+/* ========= スタート / 再スタート ========= */
 function start(base){
   pool = buildPool(base);
-  index=0; correct=0; wrong=0; wrongMap=new Map();
-  $("startView").classList.add("hidden");
-  $("resultView").classList.add("hidden");
-  $("quizView").classList.remove("hidden");
+  index = 0;
+  correct = 0;
+  wrong = 0;
+  locked = false;
+  wrongMap = new Map();
+
+  showQuiz();
+  updateQuizMeta();
   showQuestion();
 }
 
 /* ========= イベント ========= */
-$("startBtn").onclick=()=>{
-  const s=normalize($("startYear").value);
-  const e=normalize($("endYear").value);
-  useRandom=$("randomToggle").checked;
-  const filtered=ALL.filter(q=>{
-    if(s!==null && q.year<s) return false;
-    if(e!==null && q.year>e) return false;
+$("startBtn").onclick = () => {
+  const s = normalize($("startYear").value);
+  const e = normalize($("endYear").value);
+  useRandom = $("randomToggle").checked;
+
+  if (s !== null && e !== null && s > e) {
+    $("startMsg").className = "msg ng";
+    $("startMsg").textContent = "開始年が終了年より大きいです。";
+    $("startMsg").style.display = "block";
+    return;
+  }
+
+  const filtered = ALL.filter(q=>{
+    if(s !== null && q.year < s) return false;
+    if(e !== null && q.year > e) return false;
     return true;
   });
-  if(filtered.length===0){
+
+  if(filtered.length === 0){
     $("startMsg").className="msg ng";
     $("startMsg").textContent="該当する問題がありません";
     $("startMsg").style.display="block";
     return;
   }
+
+  $("startMsg").style.display="none";
   start(filtered);
 };
-$("startAllBtn").onclick=()=>{
-  useRandom=$("randomToggle").checked;
+
+$("startAllBtn").onclick = () => {
+  useRandom = $("randomToggle").checked;
+  $("startMsg").style.display="none";
   start(ALL);
 };
-$("retryAllBtn").onclick=()=>start(pool);
-$("retryWrongBtn").onclick=()=>{
-  const ws=[...wrongMap.values()];
-  if(ws.length) start(ws);
+
+$("retryAllBtn").onclick = () => {
+  // 「同条件」＝現在の pool の元データで再出題（ランダムなら再シャッフル）
+  // poolは出題用の並び替え後なので、元データを復元するために id で ALL から取り直す
+  const ids = new Set(pool.map(x => x.id));
+  const base = ALL.filter(x => ids.has(x.id));
+  start(base);
 };
-$("backBtn").onclick=()=>{
-  $("resultView").classList.add("hidden");
-  $("startView").classList.remove("hidden");
+
+$("retryWrongBtn").onclick = () => {
+  const ws = [...wrongMap.values()];
+  if (ws.length === 0) return;
+  // 間違いだけ復習（ランダム設定は維持）
+  start(ws);
 };
-$("checkBtn").onclick=check;
-$("quitBtn").onclick=finish;
-document.addEventListener("keydown",e=>{
-  if(e.key==="Enter" && !$("quizView").classList.contains("hidden")) check();
+
+$("backBtn").onclick = () => {
+  showStart();
+};
+
+$("checkBtn").onclick = check;
+
+$("quitBtn").onclick = () => {
+  if (!confirm("途中で終了しますか？\n（ここまでの成績を表示します）")) return;
+  finish();
+};
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !$("quizView").classList.contains("hidden")) check();
 });
 
 /* 初期表示 */
-$("totalCount").textContent = ALL.length;
+$("totalCount").textContent = String(ALL.length);
+showStart();
 </script>
 </body>
 </html>
