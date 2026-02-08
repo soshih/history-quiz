@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ - 魔法の修行 v3.1</title>
+  <title>歴史 年号クイズ - 魔法の修行 v3.2</title>
   <style>
     :root{
       --bg:#f6f7fb;
@@ -197,7 +197,7 @@
       </div>
 
       <div class="sub" style="margin-top:10px;">
-        ※総合Lvは「3回以上練習した問題（attempt ≥ 3）」だけで計算しています
+        ※総合Lvは「3回以上練習した問題（attempt ≥ 3）」だけで計算しています（v3.2：上がり方をゆっくりに調整）
       </div>
     </div>
 
@@ -251,6 +251,10 @@
           </div>
           <div class="row" style="margin-top:10px;">
             <button id="resetAllBtn" class="danger tiny">学習データをリセット</button>
+            <button id="hardResetBtn" class="danger tiny">完全リセット</button>
+          </div>
+          <div class="muted" style="margin-top:8px;">
+            「完全リセット」は旧バージョンの保存データも含めて全部消します（Lvがおかしい時はこちら）
           </div>
         </div>
       </div>
@@ -369,7 +373,7 @@ const LEVEL_TITLES = {
   22: { icon:"✨", group:"優等生", title:"優等生：スピードも良い" },
   23: { icon:"✨", group:"優等生", title:"優等生：説明までできる" },
   24: { icon:"✨", group:"優等生", title:"優等生：安定感バツグン" },
-  25: { icon:"✨", group:"優等生", title:"優等生：先生にほめられる" },
+  25: { icon:"✨", group:"優等生", title:"先生にほめられる" },
   26: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：失敗しない型" },
   27: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：難問も落ち着いて" },
   28: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：一発成功が多い" },
@@ -379,6 +383,17 @@ const LEVEL_TITLES = {
 
 const LS_STATS_KEY = "hpHistoryQuiz_stats_v1";
 const LS_PREF_KEY  = "hpHistoryQuiz_prefs_v1";
+
+/* 旧バージョンで使っていそうなキー（残骸対策）
+   ※もし別キーを過去に使っていたならここに足していけばOK */
+const LEGACY_KEYS = [
+  "historyQuizStats",
+  "historyQuiz_stats",
+  "hpHistoryQuiz_stats",
+  "hpHistoryQuiz_stats_v0",
+  "hpHistoryQuiz_prefs",
+  "hpHistoryQuiz_prefs_v0",
+];
 
 function loadStats(){
   try{
@@ -470,18 +485,15 @@ function masteryInfo(qid){
   return {icon:"🧪", label:`調合中 ${pct}%`, cls:"m-low", detail:`${st.correct}/${st.attempt}`};
 }
 
-/* ======================================================
-   ★ v3.1 変更点：
-   総合Lvは「attempt >= 3 の問題だけ」を集計して計算
-====================================================== */
+/* ===============================
+   集計（評価対象：attempt>=3）
+================================ */
 function overallAggregate(){
   let totalAttempt=0, totalCorrect=0, totalWrong=0, maxStreak=0, counted=0;
   for(const q of ALL){
     const st = stats[q.id];
     if(!st) continue;
-
-    // ★ここが変更点：3回未満は除外
-    if((st.attempt || 0) < 3) continue;
+    if((st.attempt || 0) < 3) continue; // 評価対象のみ
 
     counted++;
     totalAttempt += st.attempt||0;
@@ -492,26 +504,49 @@ function overallAggregate(){
   return { totalAttempt, totalCorrect, totalWrong, maxStreak, counted };
 }
 
+/* ===============================
+   参考：全体集計（attempt>=1）
+   表示用（納得感UP & 原因切り分け）
+================================ */
+function overallAggregateAll(){
+  let totalAttempt=0, totalCorrect=0, totalWrong=0, maxStreak=0, touched=0;
+  for(const q of ALL){
+    const st = stats[q.id];
+    if(!st) continue;
+    if((st.attempt || 0) < 1) continue;
+
+    touched++;
+    totalAttempt += st.attempt||0;
+    totalCorrect += st.correct||0;
+    totalWrong   += st.wrong||0;
+    maxStreak = Math.max(maxStreak, st.streak||0);
+  }
+  return { totalAttempt, totalCorrect, totalWrong, maxStreak, touched };
+}
+
+/* ======================================================
+   ★ v3.2：レベル計算を「ゆっくり上がる」方式へ
+   - attempt>=3 の評価対象だけで計算
+   - a=0（評価対象ゼロ）ならLv1固定
+   - 正答率 × 経験値（a/30）でスコア化
+   - 連続正解ボーナスは控えめ（最大+1）
+====================================================== */
 function computeOverallLevel(){
   const agg = overallAggregate();
   const a = agg.totalAttempt;
   const c = agg.totalCorrect;
-  const rate = a ? (c / a) : 0;
 
-  const base = 1 + Math.floor(rate * 29);
+  if(a === 0) return 1; // 評価対象がないならLv1固定
 
-  // gate：評価対象（attempt>=3）の総出題数ベースで上限
-  let cap = 30;
-  if(a <= 5) cap = 10;
-  else if(a <= 15) cap = 20;
+  const rate = c / a;               // 0..1
+  const exp  = Math.min(1, a / 30); // 30回で1.0
+  const score = rate * exp;         // 0..1
 
-  const s = agg.maxStreak;
-  let bonus = 0;
-  if(s >= 5) bonus = 3;
-  else if(s >= 3) bonus = 2;
-  else if(s >= 2) bonus = 1;
+  let level = 1 + Math.floor(score * 29);
 
-  return clamp(Math.min(base, cap) + bonus, 1, 30);
+  if(agg.maxStreak >= 5) level += 1; // 控えめ
+
+  return clamp(level, 1, 30);
 }
 
 function overallTitleText(level){
@@ -521,21 +556,30 @@ function overallTitleText(level){
 
 function updateBanner(){
   const agg = overallAggregate();
+  const all = overallAggregateAll();
+
   const level = computeOverallLevel();
+
   const a = agg.totalAttempt;
   const c = agg.totalCorrect;
   const rate = a ? Math.round((c/a)*100) : 0;
 
+  const aAll = all.totalAttempt;
+  const cAll = all.totalCorrect;
+
   $("overallTitleBadge").textContent = `総合：${overallTitleText(level)}`;
   $("overallRateBadge").textContent  = `正答率：${rate}%`;
-  $("streakBadge").textContent       = `連続正解：${agg.maxStreak}`;
-  $("totalBadge").textContent        = `累計：${c}/${a}（正解/出題）`;
+
+  $("streakBadge").textContent = `連続正解：${Math.max(agg.maxStreak, all.maxStreak)}`;
+
+  // ★ここ：評価対象/全体を併記（原因切り分けにもなる）
+  $("totalBadge").textContent = `累計：評価 ${c}/${a}（attempt≥3） / 全体 ${cAll}/${aAll}`;
 
   for(let i=1;i<=30;i++){
     const el = $("seg"+i);
     el.className = "seg";
     if(i <= level) el.classList.add("on");
-    else if(i <= Math.max(10, Math.ceil(level*0.6))) el.classList.add("mid");
+    else if(i <= Math.max(6, Math.ceil(level*0.6))) el.classList.add("mid");
     else el.classList.add("low");
   }
 }
@@ -706,9 +750,12 @@ function renderNotebook(){
   }`;
 
   const agg = overallAggregate();
+  const all = overallAggregateAll();
   const level = computeOverallLevel();
   const rate = agg.totalAttempt ? Math.round((agg.totalCorrect/agg.totalAttempt)*100) : 0;
-  $("nbSummaryChip").textContent = `総合 ${overallTitleText(level)} / 正答率 ${rate}% / 累計 ${agg.totalCorrect}/${agg.totalAttempt} / 評価対象 ${agg.counted}問`;
+
+  $("nbSummaryChip").textContent =
+    `総合 ${overallTitleText(level)} / 正答率 ${rate}% / 評価 ${agg.totalCorrect}/${agg.totalAttempt}（対象${agg.counted}問） / 全体 ${all.totalCorrect}/${all.totalAttempt}（触った${all.touched}問）`;
 
   const table = $("nbTable");
   table.innerHTML = "";
@@ -759,6 +806,36 @@ function renderNotebook(){
       startWithQuestions(base);
     });
   });
+}
+
+/* ===== リセット系 ===== */
+function softReset(){
+  stats = {};
+  saveStats(stats);
+  updateBanner();
+}
+function hardReset(){
+  // 現行キー削除
+  try{ localStorage.removeItem(LS_STATS_KEY); }catch(e){}
+  try{ localStorage.removeItem(LS_PREF_KEY); }catch(e){}
+
+  // 旧キーも削除
+  for(const k of LEGACY_KEYS){
+    try{ localStorage.removeItem(k); }catch(e){}
+  }
+
+  // メモリ側も初期化
+  stats = {};
+  prefs = {};
+  useRandom = true;
+  soundOn = true;
+
+  try{
+    $("randomToggle").checked = true;
+    $("soundToggle").checked = true;
+  }catch(e){}
+
+  updateBanner();
 }
 
 /* ===== Events ===== */
@@ -875,10 +952,14 @@ $("trainFromNotebookBtn").addEventListener("click", ()=>{
 
 $("resetAllBtn").addEventListener("click", ()=>{
   if(!confirm("学習データ（得意度・累計）をリセットしますか？")) return;
-  stats = {};
-  saveStats(stats);
-  updateBanner();
+  softReset();
   alert("リセットしました。");
+});
+
+$("hardResetBtn").addEventListener("click", ()=>{
+  if(!confirm("完全リセットしますか？\n（旧バージョンの保存データも全部消します）")) return;
+  hardReset();
+  alert("完全リセットしました。");
 });
 
 /* ===== init ===== */
