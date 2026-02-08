@@ -211,6 +211,7 @@
           <div class="row">
             <input id="startYear" class="narrow" inputmode="numeric" placeholder="開始年（例：57）">
             <input id="endYear" class="narrow" inputmode="numeric" placeholder="終了年（例：1485）">
+            <input id="questionCount" class="narrow" inputmode="numeric" placeholder="問題数（例：10）">
           </div>
 
           <div class="row" style="margin-top:10px;">
@@ -430,6 +431,7 @@ let wrongMap = new Map();
 
 let useRandom = prefs.useRandom ?? true;
 let soundOn   = prefs.soundOn ?? true;
+let questionCount = Number.isInteger(prefs.questionCount) && prefs.questionCount > 0 ? prefs.questionCount : null;
 
 let currentBaseIds = null;
 let lastOverallLevel = null;
@@ -452,6 +454,15 @@ function shuffle(a){
   return b;
 }
 function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+function parseQuestionCount(raw, maxCount){
+  if(raw === null || raw === undefined || raw === "") return { value:null };
+  const n = normalizeYear(raw);
+  if(n === null) return { error:"問題数は数字で入力してください。" };
+  if(n < 1) return { error:"問題数は1以上で入力してください。" };
+  if(n > maxCount) return { error:`問題数は最大${maxCount}です。` };
+  return { value:n };
+}
 
 function beep(ok){
   if(!soundOn) return;
@@ -708,6 +719,9 @@ function buildPool(baseQuestions){
   let arr = baseQuestions.slice();
   if(useRandom) arr = shuffle(arr);
   else arr.sort((a,b)=>a.year-b.year);
+  if(Number.isInteger(questionCount) && questionCount > 0){
+    arr = arr.slice(0, questionCount);
+  }
   return arr;
 }
 
@@ -926,10 +940,12 @@ function hardReset(){
   prefs = {};
   useRandom = true;
   soundOn = true;
+  questionCount = null;
 
   try{
     $("randomToggle").checked = true;
     $("soundToggle").checked = true;
+    $("questionCount").value = "";
   }catch(e){}
 
   updateBanner();
@@ -978,7 +994,18 @@ $("startBtn").addEventListener("click", ()=>{
     return;
   }
 
+  const countResult = parseQuestionCount($("questionCount").value, filtered.length);
+  if(countResult.error){
+    $("startMsg").className = "msg ng";
+    $("startMsg").textContent = countResult.error;
+    $("startMsg").style.display = "block";
+    return;
+  }
+
   $("startMsg").style.display = "none";
+  questionCount = countResult.value;
+  prefs.questionCount = questionCount;
+  savePrefs(prefs);
   startWithQuestions(filtered);
 });
 
@@ -988,6 +1015,15 @@ $("startAllBtn").addEventListener("click", ()=>{
 
   prefs.useRandom = useRandom;
   prefs.soundOn   = soundOn;
+  const countResult = parseQuestionCount($("questionCount").value, ALL.length);
+  if(countResult.error){
+    $("startMsg").className = "msg ng";
+    $("startMsg").textContent = countResult.error;
+    $("startMsg").style.display = "block";
+    return;
+  }
+  questionCount = countResult.value;
+  prefs.questionCount = questionCount;
   savePrefs(prefs);
 
   $("startMsg").style.display = "none";
@@ -1063,6 +1099,7 @@ $("hardResetBtn").addEventListener("click", ()=>{
 $("totalCount").textContent = String(ALL.length);
 $("randomToggle").checked = useRandom;
 $("soundToggle").checked  = soundOn;
+$("questionCount").value = questionCount ?? "";
 
 updateBanner();
 showView("startView");
