@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>歴史 年号クイズ</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background:#f6f7fb; margin:0; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 20px; }
+    .card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 6px 20px rgba(0,0,0,.06); }
+    h1 { font-size:18px; margin:0 0 12px; }
+    h2 { font-size:16px; margin:18px 0 10px; }
+    .event { font-size:22px; line-height:1.5; padding:14px; background:#f3f5ff; border-radius:12px; margin-bottom:14px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input { font-size:20px; padding:10px 14px; width:220px; border-radius:10px; border:1px solid #cfd3e3; }
+    button { font-size:16px; padding:10px 14px; border-radius:10px; border:0; cursor:pointer; }
+    .primary { background:#2f6fed; color:#fff; }
+    .ghost { background:#eef2ff; }
+    .danger { background:#ffebee; }
+    .msg { margin-top:12px; padding:12px; border-radius:10px; font-size:18px; display:none; }
+    .ok { background:#e8f5e9; }
+    .ng { background:#ffebee; }
+    .meta { margin-top:14px; font-size:14px; color:#555; display:flex; gap:16px; flex-wrap:wrap; }
+    .small { color:#666; font-size:13px; margin-top:8px; }
+    ul { margin: 8px 0 0; padding-left: 18px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#f1f3f8; font-size:12px; color:#444; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+
+    <!-- ===== クイズ画面 ===== -->
+    <div id="quizView">
+      <h1>歴史 年号クイズ（出来事 → 年号入力） <span id="modeBadge" class="badge">全問</span></h1>
+
+      <div id="event" class="event"></div>
+
+      <div class="row">
+        <input id="answer" type="text" inputmode="numeric" placeholder="年号を入力（例：57）" />
+        <button id="checkBtn" class="primary">判定</button>
+      </div>
+
+      <div id="message" class="msg"></div>
+
+      <div class="meta">
+        <div>正解：<span id="correct">0</span></div>
+        <div>不正解：<span id="wrong">0</span></div>
+        <div>進捗：<span id="progress">-</span></div>
+      </div>
+
+      <div class="small">Enterで判定（※判定後は自動で次の問題に進みます）</div>
+    </div>
+
+    <!-- ===== 結果画面 ===== -->
+    <div id="resultView" class="hidden">
+      <h1>結果</h1>
+
+      <div class="meta" style="font-size:15px;">
+        <div>正解：<b><span id="rCorrect">0</span></b></div>
+        <div>不正解：<b><span id="rWrong">0</span></b></div>
+        <div>正答率：<b><span id="rRate">0</span>%</b></div>
+        <div>問題数：<b><span id="rTotal">0</span></b></div>
+      </div>
+
+      <h2>間違えた問題</h2>
+      <div id="wrongEmpty" class="small">間違いはありませんでした！</div>
+      <ul id="wrongList"></ul>
+
+      <h2>次はどうする？</h2>
+      <div class="row">
+        <button id="retryWrongBtn" class="primary">間違いだけ復習</button>
+        <button id="retryAllBtn" class="ghost">全問もう一回</button>
+        <button id="resetScoreBtn" class="danger">成績リセット</button>
+      </div>
+
+      <div class="small">※「間違いだけ復習」は、間違いが0件のときはできません。</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ===============================
+   問題データ（自由に追加OK）
+   ※必要なら、前に渡した50問の配列に差し替えできます
+================================ */
+const QUESTIONS = [
+  // 古代
+  { id: "q001", year: 57,  event: "倭の奴国の王が後漢に使いを送る" },
+  { id: "q002", year: 239, event: "卑弥呼が魏に使いを送る" },
+  { id: "q003", year: 538, event: "百済から仏教の伝来" },
+  { id: "q004", year: 593, event: "聖徳太子が推古天皇の政治に参加" },
+  { id: "q005", year: 603, event: "冠位十二階の制度が定められる" },
+  { id: "q006", year: 604, event: "十七条の憲法が定められる" },
+  { id: "q007", year: 607, event: "遣隋使の派遣（小野妹子ら）" },
+  { id: "q008", year: 630, event: "第1回遣唐使の派遣" },
+  { id: "q009", year: 645, event: "大化の改新の始まり" },
+  { id: "q010", year: 663, event: "白村江の戦いがおこる" },
+  { id: "q011", year: 672, event: "壬申の乱がおこる" },
+  { id: "q012", year: 694, event: "都が藤原京にうつる" },
+  { id: "q013", year: 701, event: "大宝律令の完成" },
+  { id: "q014", year: 708, event: "和同開珎がつくられ始める" },
+  { id: "q015", year: 710, event: "都が平城京にうつる" },
+  { id: "q016", year: 712, event: "古事記の完成" },
+  { id: "q017", year: 720, event: "日本書紀の完成" },
+  { id: "q018", year: 723, event: "三世一身法が出される" },
+  { id: "q019", year: 741, event: "聖武天皇が国分寺と国分尼寺の建立を命じる" },
+  { id: "q020", year: 743, event: "墾田永年私財法が出される" },
+  { id: "q021", year: 752, event: "東大寺の大仏が完成" },
+  { id: "q022", year: 794, event: "都が平安京にうつる" },
+  { id: "q023", year: 858, event: "藤原良房が摂政となる" },
+  { id: "q024", year: 880, event: "藤原基経が関白となる" },
+  { id: "q025", year: 894, event: "遣唐使の停止" },
+
+  // 中世
+  { id: "q026", year: 939, event: "平将門の乱がおこる" },
+  { id: "q027", year: 940, event: "藤原純友の乱がおこる" },
+  { id: "q028", year: 988, event: "尾張国郡司百姓等解（国司が訴えられる）" },
+  { id: "q029", year: 1016, event: "藤原道長が摂政となる" },
+  { id: "q030", year: 1051, event: "前九年合戦が始まる" },
+  { id: "q031", year: 1083, event: "後三年合戦が始まる" },
+  { id: "q032", year: 1086, event: "白河上皇が院政を始める" },
+  { id: "q033", year: 1156, event: "保元の乱がおこる" },
+  { id: "q034", year: 1159, event: "平治の乱がおこる" },
+  { id: "q035", year: 1167, event: "平清盛が太政大臣となる" },
+  { id: "q036", year: 1185, event: "壇ノ浦の戦いがおこる" },
+  { id: "q037", year: 1192, event: "源頼朝が征夷大将軍となり鎌倉幕府を開く" },
+  { id: "q038", year: 1221, event: "承久の乱がおこる" },
+  { id: "q039", year: 1232, event: "北条泰時が御成敗式目を制定する" },
+  { id: "q040", year: 1274, event: "文永の役がおこる" },
+  { id: "q041", year: 1281, event: "弘安の役がおこる" },
+  { id: "q042", year: 1297, event: "永仁の徳政令が出される" },
+  { id: "q043", year: 1333, event: "鎌倉幕府が滅亡する" },
+  { id: "q044", year: 1334, event: "後醍醐天皇が建武の新政を始める" },
+  { id: "q045", year: 1338, event: "足利尊氏が征夷大将軍となり室町幕府を開く" },
+  { id: "q046", year: 1392, event: "足利義満が南北朝を統一する" },
+  { id: "q047", year: 1404, event: "勘合貿易が始まる" },
+  { id: "q048", year: 1428, event: "正長の土一揆がおこる" },
+  { id: "q049", year: 1467, event: "応仁の乱が始まる" },
+  { id: "q050", year: 1485, event: "山城の国一揆がおこる" },
+];
+
+
+/* ===============================
+   状態
+================================ */
+let pool = [...QUESTIONS];         // 今回出題する問題集合（全問 or 間違いのみ）
+let mode = "all";                      // "all" or "wrong"
+let index = 0;
+let locked = false;                    // 判定後の連打防止
+let correct = 0;
+let wrong = 0;
+let wrongMap = new Map();              // id -> {event, year, lastInput}
+
+/* ===============================
+   要素
+================================ */
+const quizView = document.getElementById("quizView");
+const resultView = document.getElementById("resultView");
+const modeBadge = document.getElementById("modeBadge");
+
+const elEvent = document.getElementById("event");
+const elAnswer = document.getElementById("answer");
+const elMsg = document.getElementById("message");
+const elCorrect = document.getElementById("correct");
+const elWrong = document.getElementById("wrong");
+const elProgress = document.getElementById("progress");
+const elCheckBtn = document.getElementById("checkBtn");
+
+const rCorrect = document.getElementById("rCorrect");
+const rWrong = document.getElementById("rWrong");
+const rRate = document.getElementById("rRate");
+const rTotal = document.getElementById("rTotal");
+const wrongList = document.getElementById("wrongList");
+const wrongEmpty = document.getElementById("wrongEmpty");
+
+const retryWrongBtn = document.getElementById("retryWrongBtn");
+const retryAllBtn = document.getElementById("retryAllBtn");
+const resetScoreBtn = document.getElementById("resetScoreBtn");
+
+/* ===============================
+   共通関数
+================================ */
+function normalizeYear(input) {
+  if (!input) return null;
+  const half = input.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  const digits = half.replace(/[^0-9]/g, "");
+  if (!digits) return null;
+  return Number(digits);
+}
+
+function setMessage(type, html) {
+  elMsg.style.display = "block";
+  elMsg.className = "msg " + (type === "ok" ? "ok" : "ng");
+  elMsg.innerHTML = html;
+}
+
+function clearMessage() {
+  elMsg.style.display = "none";
+  elMsg.className = "msg";
+  elMsg.innerHTML = "";
+}
+
+function updateMeta() {
+  elCorrect.textContent = String(correct);
+  elWrong.textContent = String(wrong);
+  elProgress.textContent = `${index + 1} / ${pool.length}`;
+}
+
+function showQuizView() {
+  quizView.classList.remove("hidden");
+  resultView.classList.add("hidden");
+}
+
+function showResultView() {
+  quizView.classList.add("hidden");
+  resultView.classList.remove("hidden");
+}
+
+function showQuestion() {
+  if (index >= pool.length) {
+    finishQuiz();
+    return;
+  }
+
+  const q = pool[index];
+  modeBadge.textContent = (mode === "wrong") ? "復習（間違いのみ）" : "全問";
+
+  elEvent.textContent = q.event;
+  elAnswer.value = "";
+  elAnswer.focus();
+  clearMessage();
+
+  locked = false;
+  updateMeta();
+}
+
+function checkAnswer() {
+  if (locked) return;
+
+  const q = pool[index];
+  const inputRaw = elAnswer.value;
+  const y = normalizeYear(inputRaw);
+
+  if (y === null) {
+    setMessage("ng", "数字を入力してください（例：57）");
+    return;
+  }
+
+  locked = true;
+
+  if (y === q.year) {
+    correct++;
+    setMessage("ok", `○ 正解！ <b>${q.year}年</b>`);
+    // 復習プールから出している場合もあるので、wrongMapからは消す
+    wrongMap.delete(q.id);
+  } else {
+    wrong++;
+    setMessage("ng", `× 不正解。正解は <b>${q.year}年</b> です。`);
+    wrongMap.set(q.id, { id: q.id, event: q.event, year: q.year, lastInput: y });
+  }
+
+  updateMeta();
+
+  // 判定後は自動で次へ（1.2秒）
+  setTimeout(() => {
+    index++;
+    showQuestion();
+  }, 1200);
+}
+
+function finishQuiz() {
+  // 停止して成績表示
+  showResultView();
+
+  const total = pool.length;
+  const rate = total === 0 ? 0 : Math.round((correct / total) * 100);
+
+  rCorrect.textContent = String(correct);
+  rWrong.textContent = String(wrong);
+  rRate.textContent = String(rate);
+  rTotal.textContent = String(total);
+
+  // 間違いリスト
+  wrongList.innerHTML = "";
+  const wrongItems = Array.from(wrongMap.values());
+
+  if (wrongItems.length === 0) {
+    wrongEmpty.style.display = "block";
+    retryWrongBtn.disabled = true;
+  } else {
+    wrongEmpty.style.display = "none";
+    retryWrongBtn.disabled = false;
+
+    for (const item of wrongItems) {
+      const li = document.createElement("li");
+      // 例：出来事 → 正解年（あなたの入力）
+      li.innerHTML = `${item.event} → <b>${item.year}年</b>（入力：${item.lastInput}）`;
+      wrongList.appendChild(li);
+    }
+  }
+}
+
+function startAll() {
+  mode = "all";
+  pool = [...QUESTIONS];
+  index = 0;
+  locked = false;
+  correct = 0;
+  wrong = 0;
+  wrongMap = new Map();
+  showQuizView();
+  showQuestion();
+}
+
+function startWrongOnly() {
+  const wrongItems = Array.from(wrongMap.values());
+  if (wrongItems.length === 0) return;
+
+  mode = "wrong";
+  // 間違えた問題だけをプールにする（ALLから参照）
+  const wrongIds = new Set(wrongItems.map(x => x.id));
+  pool = QUESTIONS.filter(q => wrongIds.has(q.id));
+
+  index = 0;
+  locked = false;
+  correct = 0;
+  wrong = 0;
+  // wrongMapは継続してOK（復習で正解したら消える）
+  showQuizView();
+  showQuestion();
+}
+
+function resetScoreOnly() {
+  // 成績だけリセット（問題集合はそのまま）
+  correct = 0;
+  wrong = 0;
+  updateMeta();
+}
+
+/* ===============================
+   イベント
+================================ */
+elCheckBtn.addEventListener("click", checkAnswer);
+document.addEventListener("keydown", e => {
+  // 結果画面ではEnterで動かさない（誤作動防止）
+  if (!resultView.classList.contains("hidden")) return;
+  if (e.key === "Enter") checkAnswer();
+});
+
+retryAllBtn.addEventListener("click", startAll);
+retryWrongBtn.addEventListener("click", startWrongOnly);
+resetScoreBtn.addEventListener("click", () => {
+  // 間違い履歴も消して完全にリセットしたいならここでwrongMapも消す
+  correct = 0;
+  wrong = 0;
+  wrongMap = new Map();
+  startAll();
+});
+
+/* ===============================
+   初期スタート
+================================ */
+startAll();
+</script>
+</body>
+</html>
