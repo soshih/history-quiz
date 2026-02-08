@@ -3,143 +3,427 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ v2.1</title>
+  <title>歴史 年号クイズ - 魔法の修行 v3.1</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-      background:#f6f7fb; margin:0;
+    :root{
+      --bg:#f6f7fb;
+      --card:#fff;
+      --text:#1b1f2a;
+      --muted:#5c6477;
+      --line:#d8def0;
+      --primary:#2f6fed;
+      --chip:#f1f3f8;
+      --soft:#f3f5ff;
+      --shadow:0 10px 28px rgba(0,0,0,.08);
     }
-    .wrap { max-width:760px; margin:0 auto; padding:20px; }
-    .card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 6px 20px rgba(0,0,0,.06); }
-    h1 { font-size:18px; margin:0 0 12px; }
-    h2 { font-size:16px; margin:18px 0 10px; }
-    .event { font-size:22px; line-height:1.5; padding:14px; background:#f3f5ff; border-radius:12px; margin-bottom:14px; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    input { font-size:18px; padding:10px 12px; border-radius:10px; border:1px solid #cfd3e3; }
-    .narrow { width:160px; }
-    button { font-size:16px; padding:10px 14px; border-radius:10px; border:0; cursor:pointer; }
-    .primary { background:#2f6fed; color:#fff; }
-    .ghost { background:#eef2ff; }
-    .danger { background:#ffebee; }
-    .msg { margin-top:12px; padding:12px; border-radius:10px; font-size:16px; display:none; }
-    .ok { background:#e8f5e9; }
-    .ng { background:#ffebee; }
-    .meta { margin-top:14px; font-size:14px; color:#555; display:flex; gap:16px; flex-wrap:wrap; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#f1f3f8; font-size:12px; }
-    .hidden { display:none; }
-    ul { margin:8px 0 0; padding-left:18px; }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    }
+    .wrap{max-width:860px;margin:0 auto;padding:18px;}
+    .card{
+      background:var(--card);
+      border-radius:16px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+
+    .banner{
+      border-radius:16px;
+      padding:14px 14px 12px;
+      background:
+        radial-gradient(1200px 300px at 20% 0%, rgba(47,111,237,.20), transparent 60%),
+        radial-gradient(900px 280px at 85% 10%, rgba(255,215,0,.16), transparent 55%),
+        linear-gradient(135deg, #0f172a 0%, #111827 40%, #0b1224 100%);
+      color:#fff;
+      margin-bottom:14px;
+      overflow:hidden;
+    }
+    .banner .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+    .banner h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px;}
+    .banner .sub{font-size:13px;color:rgba(255,255,255,.8)}
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.12);
+      font-size:12px;color:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.18);
+      white-space:nowrap;
+    }
+    .wand{
+      width:34px;height:34px;border-radius:12px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.18);
+      display:grid;place-items:center;
+      flex:0 0 auto;
+    }
+    .wand svg{width:22px;height:22px;opacity:.95}
+    .grid2{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:820px){ .grid2{grid-template-columns: 1.15fr .85fr;} }
+
+    h2{font-size:15px;margin:14px 0 10px;color:#1f2a44}
+    .muted{color:var(--muted);font-size:13px}
+    .panel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, #f9faff 0%, #f6f8ff 100%);
+      border-radius:14px;
+      padding:12px;
+    }
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input{
+      font-size:16px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fff;
+      width:220px;
+    }
+    .narrow{width:160px}
+    button{
+      font-size:15px;
+      padding:10px 14px;
+      border-radius:12px;
+      border:0;
+      cursor:pointer;
+    }
+    .primary{background:var(--primary);color:#fff}
+    .ghost{background:#eef2ff;color:#223a86}
+    .danger{background:#ffebee;color:#8a1f1f}
+    .tiny{font-size:13px;padding:8px 10px;border-radius:10px}
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      background:var(--chip);border:1px solid #e5e8f3;
+      font-size:12px;color:#3a4256;
+      white-space:nowrap;
+    }
+    .msg{
+      margin-top:10px;padding:12px;border-radius:12px;
+      display:none;font-size:15px;border:1px solid transparent;
+    }
+    .ok{background:#ecfdf3;border-color:#bde8c9}
+    .ng{background:#fff1f2;border-color:#f3c1c7}
+    .hidden{display:none}
+    .event{
+      font-size:22px;line-height:1.55;
+      padding:14px;border-radius:14px;
+      background:var(--soft);
+      border:1px solid #e2e8ff;
+      margin:12px 0;
+    }
+    .meta{
+      margin-top:12px;font-size:13px;color:var(--muted);
+      display:flex;gap:14px;flex-wrap:wrap;
+    }
+    .kpi b{color:#111827}
+
+    .lvbar{display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden}
+    .seg{
+      width:100%;height:10px;border-radius:999px;
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.18);
+      flex:1 1 0;
+    }
+    .seg.on{background:linear-gradient(90deg, rgba(255,215,0,.95), rgba(47,111,237,.95)); border-color:rgba(255,255,255,.22)}
+    .seg.mid{background:rgba(47,111,237,.35)}
+    .seg.low{background:rgba(255,255,255,.10)}
+
+    .m-unk{background:#eef2ff;color:#223a86}
+    .m-low{background:#fff7ed;color:#9a3412}
+    .m-mid{background:#ecfeff;color:#155e75}
+    .m-hi{background:#ecfdf3;color:#166534}
+    .m-max{background:#fefce8;color:#854d0e}
+    .divider{height:1px;background:#e7ebf6;margin:12px 0}
+
+    table{width:100%;border-collapse:separate;border-spacing:0 8px}
+    td{vertical-align:top}
+    .rowcard{
+      background:#fff;border:1px solid #e7ebf6;border-radius:14px;
+      padding:10px 12px;
+    }
+    .qtitle{font-weight:700}
+    .qsub{font-size:12px;color:var(--muted);margin-top:4px}
+    .right{display:flex;justify-content:flex-end}
+    .mono{font-variant-numeric:tabular-nums}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
 
-    <!-- ===== スタート画面 ===== -->
-    <div id="startView">
-      <h1>歴史 年号クイズ（スタート設定）</h1>
+    <div class="banner">
+      <div class="row" style="justify-content:space-between;">
+        <div class="row">
+          <div class="wand" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 2c1.8 3.6 3.4 7.7 4.1 11.6.4 2.3-.3 4.2-2.1 5.2-1.4.8-2.7.8-4 0-1.8-1-2.5-2.9-2.1-5.2C8.6 9.7 10.2 5.6 12 2Z" stroke="white" stroke-width="1.4"/>
+              <path d="M4 19.5c2.6-1.2 5.4-1.8 8-1.8s5.4.6 8 1.8" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M9.5 9.5l1.2.7.6-1.2.6 1.2 1.2-.7-.7 1.2 1.2.6-1.2.6.7 1.2-1.2-.7-.6 1.2-.6-1.2-1.2.7.7-1.2-1.2-.6 1.2-.6-.7-1.2Z" fill="white" opacity=".9"/>
+            </svg>
+          </div>
+          <div>
+            <h1>歴史 年号クイズ｜魔法の修行</h1>
+            <div class="sub">出来事 → 年号入力（正解すると自動で次へ）</div>
+          </div>
+        </div>
 
-      <div class="row">
-        <input id="startYear" class="narrow" inputmode="numeric" placeholder="開始年（例：57）">
-        <input id="endYear" class="narrow" inputmode="numeric" placeholder="終了年（例：1485）">
+        <div class="row" style="gap:8px;">
+          <span id="overallTitleBadge" class="badge">総合：-</span>
+          <span id="overallRateBadge" class="badge">正答率：-</span>
+        </div>
       </div>
 
-      <div class="row" style="margin-top:10px;">
-        <label>
-          <input type="checkbox" id="randomToggle" checked>
-          ランダム出題
-        </label>
+      <div class="divider" style="background:rgba(255,255,255,.14);margin:12px 0;"></div>
+
+      <div class="row" style="justify-content:space-between;align-items:flex-end;">
+        <div style="min-width:240px;">
+          <div class="sub" style="margin-bottom:6px;">総合レベル（Lv1〜30）</div>
+          <div class="lvbar" aria-hidden="true">
+            <div class="seg" id="seg1"></div><div class="seg" id="seg2"></div><div class="seg" id="seg3"></div><div class="seg" id="seg4"></div><div class="seg" id="seg5"></div>
+            <div class="seg" id="seg6"></div><div class="seg" id="seg7"></div><div class="seg" id="seg8"></div><div class="seg" id="seg9"></div><div class="seg" id="seg10"></div>
+            <div class="seg" id="seg11"></div><div class="seg" id="seg12"></div><div class="seg" id="seg13"></div><div class="seg" id="seg14"></div><div class="seg" id="seg15"></div>
+            <div class="seg" id="seg16"></div><div class="seg" id="seg17"></div><div class="seg" id="seg18"></div><div class="seg" id="seg19"></div><div class="seg" id="seg20"></div>
+            <div class="seg" id="seg21"></div><div class="seg" id="seg22"></div><div class="seg" id="seg23"></div><div class="seg" id="seg24"></div><div class="seg" id="seg25"></div>
+            <div class="seg" id="seg26"></div><div class="seg" id="seg27"></div><div class="seg" id="seg28"></div><div class="seg" id="seg29"></div><div class="seg" id="seg30"></div>
+          </div>
+        </div>
+
+        <div class="row" style="gap:8px;">
+          <span class="badge" id="streakBadge">連続正解：-</span>
+          <span class="badge" id="totalBadge">累計：-</span>
+        </div>
       </div>
 
-      <div class="row" style="margin-top:10px;">
-        <button id="startBtn" class="primary">スタート</button>
-        <button id="startAllBtn" class="ghost">全問スタート</button>
-      </div>
-
-      <div id="startMsg" class="msg"></div>
-
-      <div class="meta">
-        <div>登録問題数：<span id="totalCount">0</span></div>
+      <div class="sub" style="margin-top:10px;">
+        ※総合Lvは「3回以上練習した問題（attempt ≥ 3）」だけで計算しています
       </div>
     </div>
 
-    <!-- ===== クイズ画面 ===== -->
+    <div id="startView">
+      <div class="grid2">
+        <div class="panel">
+          <h2>スタート設定</h2>
+
+          <div class="row">
+            <input id="startYear" class="narrow" inputmode="numeric" placeholder="開始年（例：57）">
+            <input id="endYear" class="narrow" inputmode="numeric" placeholder="終了年（例：1485）">
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <label class="chip">
+              <input type="checkbox" id="randomToggle" checked>
+              ランダム出題
+            </label>
+            <label class="chip">
+              <input type="checkbox" id="soundToggle" checked>
+              効果音
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="startBtn" class="primary">スタート</button>
+            <button id="startAllBtn" class="ghost">全問スタート</button>
+            <button id="openNotebookBtn" class="ghost">修行ノート</button>
+          </div>
+
+          <div id="startMsg" class="msg"></div>
+
+          <div class="meta">
+            <div class="kpi">登録問題数：<b><span id="totalCount">0</span></b></div>
+            <div class="kpi">今日のおすすめ：<b>「修行ノート」→ 苦手だけ練習</b></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>1問ごとの得意度（表示の意味）</h2>
+          <div class="row">
+            <span class="chip m-unk">❔ 未判定（まだデータ不足）</span>
+            <span class="chip m-low">🧪 調合中（要練習）</span>
+            <span class="chip m-mid">🪄 習得中（あと少し）</span>
+            <span class="chip m-hi">✨ 安定（かなり得意）</span>
+            <span class="chip m-max">🏆 マスター（完全習得）</span>
+          </div>
+          <div class="divider"></div>
+          <div class="muted">
+            ※「総合レベル」は全体の成績から計算します（問題ごとの印とは別です）
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="resetAllBtn" class="danger tiny">学習データをリセット</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="quizView" class="hidden">
-      <h1>
-        年号クイズ
-        <span id="orderBadge" class="badge"></span>
-      </h1>
+      <div class="row" style="justify-content:space-between;align-items:flex-end;">
+        <div>
+          <div class="chip" id="modeChip">モード：-</div>
+          <div class="chip" id="qMasteryChip">得意度：-</div>
+        </div>
+        <div class="row">
+          <button id="quitBtn" class="danger">途中で終了</button>
+        </div>
+      </div>
 
       <div id="event" class="event"></div>
 
       <div class="row">
-        <input id="answer" inputmode="numeric" placeholder="年号を入力">
+        <input id="answer" inputmode="numeric" placeholder="年号を入力（例：57）">
         <button id="checkBtn" class="primary">判定</button>
-        <button id="quitBtn" class="danger">途中終了</button>
       </div>
 
       <div id="message" class="msg"></div>
 
       <div class="meta">
-        <div>正解：<span id="correct">0</span></div>
-        <div>不正解：<span id="wrong">0</span></div>
-        <div>進捗：<span id="progress">-</span></div>
+        <div class="kpi">正解：<b><span id="correct">0</span></b></div>
+        <div class="kpi">不正解：<b><span id="wrong">0</span></b></div>
+        <div class="kpi">進捗：<b><span id="progress">-</span></b></div>
       </div>
+
+      <div class="muted" style="margin-top:8px;">Enterで判定（判定後は自動で次へ）</div>
     </div>
 
-    <!-- ===== 結果画面 ===== -->
     <div id="resultView" class="hidden">
-      <h1>結果</h1>
+      <h2>結果</h2>
 
-      <div class="meta">
-        <div>正解：<b><span id="rCorrect"></span></b></div>
-        <div>不正解：<b><span id="rWrong"></span></b></div>
-        <div>正答率：<b><span id="rRate"></span>%</b></div>
-        <div>問題数：<b><span id="rTotal"></span></b></div>
+      <div class="meta" style="font-size:14px;">
+        <div class="kpi">正解：<b><span id="rCorrect"></span></b></div>
+        <div class="kpi">不正解：<b><span id="rWrong"></span></b></div>
+        <div class="kpi">正答率：<b><span id="rRate"></span>%</b></div>
+        <div class="kpi">問題数：<b><span id="rTotal"></span></b></div>
       </div>
 
+      <div class="divider"></div>
+
       <h2>間違えた問題</h2>
-      <div id="noWrong" class="msg ok">間違いはありませんでした！</div>
+      <div id="noWrong" class="msg ok">間違いはありませんでした！🏆</div>
       <ul id="wrongList"></ul>
 
       <div class="row" style="margin-top:12px;">
         <button id="retryWrongBtn" class="primary">間違いだけ復習</button>
         <button id="retryAllBtn" class="ghost">同条件でもう一回</button>
+        <button id="openNotebookFromResultBtn" class="ghost">修行ノート</button>
         <button id="backBtn" class="ghost">スタートに戻る</button>
       </div>
+    </div>
+
+    <div id="notebookView" class="hidden">
+      <h2>修行ノート（問題別の得意度）</h2>
+      <div class="muted">得意度は「印＋正答率＋回数」で表示します。苦手だけを選んで特訓できます。</div>
+
+      <div class="row" style="margin-top:10px;">
+        <span class="chip" id="nbSummaryChip">-</span>
+        <span class="chip" id="nbFilterChip">フィルタ：-</span>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="ghost" id="filterAllBtn">全部</button>
+        <button class="ghost" id="filterLowBtn">🧪 調合中だけ</button>
+        <button class="ghost" id="filterMidBtn">🪄 習得中だけ</button>
+        <button class="ghost" id="filterHiBtn">✨ 安定以上</button>
+        <button class="primary" id="trainFromNotebookBtn">表示中を特訓</button>
+        <button class="ghost" id="closeNotebookBtn">戻る</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="notebookEmpty" class="msg ng">表示する問題がありません。</div>
+      <table id="nbTable"></table>
     </div>
 
   </div>
 </div>
 
-<!-- ===== 問題データ（別ファイル）===== -->
 <script src="./questions.js"></script>
 
 <script>
-/* ========= データ ========= */
 const ALL = window.QUESTIONS || [];
 if (!Array.isArray(ALL) || ALL.length === 0) {
-  alert("questions.js が読み込めていません。index.html と同じ場所に questions.js があるか確認してください。");
+  alert("questions.js が読み込めていません。index.html と同じフォルダに questions.js があるか確認してください。");
 }
 
-/* ========= 状態 ========= */
+const LEVEL_TITLES = {
+  1:  { icon:"🪄", group:"呪文見習い", title:"杖の持ち方見習い" },
+  2:  { icon:"🪄", group:"呪文見習い", title:"発音トレーニング中" },
+  3:  { icon:"🪄", group:"呪文見習い", title:"魔法の基礎体力づくり" },
+  4:  { icon:"🪄", group:"呪文見習い", title:"詠唱チャレンジャー" },
+  5:  { icon:"🪄", group:"呪文見習い", title:"呪文の芽が出た" },
+  6:  { icon:"🪄", group:"呪文見習い", title:"ミスが減ってきた" },
+  7:  { icon:"🪄", group:"呪文見習い", title:"成功のコツ発見" },
+  8:  { icon:"🪄", group:"呪文見習い", title:"安定への第一歩" },
+  9:  { icon:"🪄", group:"呪文見習い", title:"もうすぐ入学レベル" },
+  10: { icon:"🪄", group:"呪文見習い", title:"入学準備OK" },
+  11: { icon:"📘", group:"ホグワーツ生", title:"1年生：基礎呪文クラス" },
+  12: { icon:"📘", group:"ホグワーツ生", title:"1年生：正確さアップ中" },
+  13: { icon:"📘", group:"ホグワーツ生", title:"2年生：復習が得意" },
+  14: { icon:"📘", group:"ホグワーツ生", title:"2年生：うっかりミス対策中" },
+  15: { icon:"📘", group:"ホグワーツ生", title:"3年生：呪文の安定感" },
+  16: { icon:"📘", group:"ホグワーツ生", title:"3年生：苦手克服モード" },
+  17: { icon:"📘", group:"ホグワーツ生", title:"4年生：実戦力がついた" },
+  18: { icon:"📘", group:"ホグワーツ生", title:"4年生：成功率が高い" },
+  19: { icon:"📘", group:"ホグワーツ生", title:"5年生：O.W.L.対策中" },
+  20: { icon:"📘", group:"ホグワーツ生", title:"5年生：試験に強い" },
+  21: { icon:"✨", group:"優等生", title:"優等生：ほぼノーミス" },
+  22: { icon:"✨", group:"優等生", title:"優等生：スピードも良い" },
+  23: { icon:"✨", group:"優等生", title:"優等生：説明までできる" },
+  24: { icon:"✨", group:"優等生", title:"優等生：安定感バツグン" },
+  25: { icon:"✨", group:"優等生", title:"優等生：先生にほめられる" },
+  26: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：失敗しない型" },
+  27: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：難問も落ち着いて" },
+  28: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：一発成功が多い" },
+  29: { icon:"🧙‍♂️", group:"熟練魔法使い", title:"熟練：ほぼ完全詠唱" },
+  30: { icon:"🏆", group:"魔法界のマスター", title:"魔法界のマスター：完全習得" },
+};
+
+const LS_STATS_KEY = "hpHistoryQuiz_stats_v1";
+const LS_PREF_KEY  = "hpHistoryQuiz_prefs_v1";
+
+function loadStats(){
+  try{
+    const raw = localStorage.getItem(LS_STATS_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === "object") ? obj : {};
+  }catch(e){ return {}; }
+}
+function saveStats(s){
+  try{ localStorage.setItem(LS_STATS_KEY, JSON.stringify(s)); }catch(e){}
+}
+function loadPrefs(){
+  try{
+    const raw = localStorage.getItem(LS_PREF_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === "object") ? obj : {};
+  }catch(e){ return {}; }
+}
+function savePrefs(p){
+  try{ localStorage.setItem(LS_PREF_KEY, JSON.stringify(p)); }catch(e){}
+}
+
+let stats = loadStats();
+let prefs = loadPrefs();
+
 let pool = [];
 let index = 0;
 let correct = 0;
 let wrong = 0;
 let locked = false;
 let wrongMap = new Map();
-let useRandom = true;
 
-/* ========= ユーティリティ ========= */
+let useRandom = prefs.useRandom ?? true;
+let soundOn   = prefs.soundOn ?? true;
+
+let currentBaseIds = null;
+
 const $ = id => document.getElementById(id);
 
-function normalize(v){
+function normalizeYear(v){
   if(!v) return null;
   const h = String(v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0));
   const d = h.replace(/[^0-9]/g,"");
   return d ? Number(d) : null;
 }
-
 function shuffle(a){
   const b = a.slice();
   for(let i=b.length-1;i>0;i--){
@@ -148,133 +432,359 @@ function shuffle(a){
   }
   return b;
 }
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 
-function buildPool(base){
-  let arr = base.slice();
-  if (useRandom) arr = shuffle(arr);
+function beep(ok){
+  if(!soundOn) return;
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = ok ? 880 : 220;
+    g.gain.value = 0.05;
+    o.connect(g); g.connect(ctx.destination);
+    o.start();
+    setTimeout(()=>{ o.stop(); ctx.close(); }, ok ? 110 : 160);
+  }catch(e){}
+}
+
+function ensureStat(qid){
+  if(!stats[qid]) stats[qid] = { attempt:0, correct:0, wrong:0, streak:0 };
+  return stats[qid];
+}
+function rateOf(st){
+  if(!st || !st.attempt) return null;
+  return st.correct / st.attempt;
+}
+function masteryInfo(qid){
+  const st = ensureStat(qid);
+  if(st.attempt < 3){
+    return {icon:"❔", label:"未判定", cls:"m-unk", detail:"データ不足"};
+  }
+  const r = rateOf(st);
+  const pct = Math.round(r*100);
+  if(r >= 0.95 && st.streak >= 3) return {icon:"🏆", label:`マスター ${pct}%`, cls:"m-max", detail:`${st.correct}/${st.attempt}`};
+  if(r >= 0.80) return {icon:"✨", label:`安定 ${pct}%`, cls:"m-hi", detail:`${st.correct}/${st.attempt}`};
+  if(r >= 0.60) return {icon:"🪄", label:`習得中 ${pct}%`, cls:"m-mid", detail:`${st.correct}/${st.attempt}`};
+  return {icon:"🧪", label:`調合中 ${pct}%`, cls:"m-low", detail:`${st.correct}/${st.attempt}`};
+}
+
+/* ======================================================
+   ★ v3.1 変更点：
+   総合Lvは「attempt >= 3 の問題だけ」を集計して計算
+====================================================== */
+function overallAggregate(){
+  let totalAttempt=0, totalCorrect=0, totalWrong=0, maxStreak=0, counted=0;
+  for(const q of ALL){
+    const st = stats[q.id];
+    if(!st) continue;
+
+    // ★ここが変更点：3回未満は除外
+    if((st.attempt || 0) < 3) continue;
+
+    counted++;
+    totalAttempt += st.attempt||0;
+    totalCorrect += st.correct||0;
+    totalWrong   += st.wrong||0;
+    maxStreak = Math.max(maxStreak, st.streak||0);
+  }
+  return { totalAttempt, totalCorrect, totalWrong, maxStreak, counted };
+}
+
+function computeOverallLevel(){
+  const agg = overallAggregate();
+  const a = agg.totalAttempt;
+  const c = agg.totalCorrect;
+  const rate = a ? (c / a) : 0;
+
+  const base = 1 + Math.floor(rate * 29);
+
+  // gate：評価対象（attempt>=3）の総出題数ベースで上限
+  let cap = 30;
+  if(a <= 5) cap = 10;
+  else if(a <= 15) cap = 20;
+
+  const s = agg.maxStreak;
+  let bonus = 0;
+  if(s >= 5) bonus = 3;
+  else if(s >= 3) bonus = 2;
+  else if(s >= 2) bonus = 1;
+
+  return clamp(Math.min(base, cap) + bonus, 1, 30);
+}
+
+function overallTitleText(level){
+  const t = LEVEL_TITLES[level] || LEVEL_TITLES[1];
+  return `Lv${level} ${t.icon}「${t.title}」`;
+}
+
+function updateBanner(){
+  const agg = overallAggregate();
+  const level = computeOverallLevel();
+  const a = agg.totalAttempt;
+  const c = agg.totalCorrect;
+  const rate = a ? Math.round((c/a)*100) : 0;
+
+  $("overallTitleBadge").textContent = `総合：${overallTitleText(level)}`;
+  $("overallRateBadge").textContent  = `正答率：${rate}%`;
+  $("streakBadge").textContent       = `連続正解：${agg.maxStreak}`;
+  $("totalBadge").textContent        = `累計：${c}/${a}（正解/出題）`;
+
+  for(let i=1;i<=30;i++){
+    const el = $("seg"+i);
+    el.className = "seg";
+    if(i <= level) el.classList.add("on");
+    else if(i <= Math.max(10, Math.ceil(level*0.6))) el.classList.add("mid");
+    else el.classList.add("low");
+  }
+}
+
+function updateQuizMeta(){
+  $("correct").textContent = String(correct);
+  $("wrong").textContent   = String(wrong);
+  $("progress").textContent = pool.length ? `${index+1} / ${pool.length}` : "-";
+}
+function setMessage(type, html){
+  const m = $("message");
+  m.className = "msg " + (type==="ok" ? "ok" : "ng");
+  m.innerHTML = html;
+  m.style.display = "block";
+}
+function clearMessage(){
+  const m = $("message");
+  m.style.display = "none";
+  m.innerHTML = "";
+}
+
+function showView(name){
+  for(const id of ["startView","quizView","resultView","notebookView"]){
+    $(id).classList.add("hidden");
+  }
+  $(name).classList.remove("hidden");
+}
+
+function buildPool(baseQuestions){
+  let arr = baseQuestions.slice();
+  if(useRandom) arr = shuffle(arr);
   else arr.sort((a,b)=>a.year-b.year);
   return arr;
 }
 
-/* ★ 画面のメタ表示を更新（今回の修正ポイント） */
-function updateQuizMeta(){
-  $("correct").textContent = String(correct);
-  $("wrong").textContent = String(wrong);
-  $("progress").textContent = pool.length ? `${index + 1} / ${pool.length}` : "-";
-  $("orderBadge").textContent = useRandom ? "ランダム" : "年号順";
-}
-
-function showMsg(type,text){
-  const m=$("message");
-  m.className="msg "+(type==="ok"?"ok":"ng");
-  m.textContent=text;
-  m.style.display="block";
-}
-
-/* ========= 画面切り替え ========= */
-function showStart(){
-  $("startView").classList.remove("hidden");
-  $("quizView").classList.add("hidden");
-  $("resultView").classList.add("hidden");
-}
-function showQuiz(){
-  $("startView").classList.add("hidden");
-  $("quizView").classList.remove("hidden");
-  $("resultView").classList.add("hidden");
-}
-function showResult(){
-  $("startView").classList.add("hidden");
-  $("quizView").classList.add("hidden");
-  $("resultView").classList.remove("hidden");
-}
-
-/* ========= クイズ進行 ========= */
 function showQuestion(){
-  if(index >= pool.length){ finish(); return; }
-
-  $("event").textContent = pool[index].event;
+  if(index >= pool.length){
+    finishQuiz();
+    return;
+  }
+  const q = pool[index];
+  $("event").textContent = q.event;
   $("answer").value = "";
   $("answer").focus();
-  $("message").style.display="none";
   locked = false;
+  clearMessage();
+
+  $("modeChip").textContent = `モード：${useRandom ? "ランダム" : "年号順"} / ${pool.length}問`;
+  const mi = masteryInfo(q.id);
+  $("qMasteryChip").className = `chip ${mi.cls}`;
+  $("qMasteryChip").textContent = `得意度：${mi.icon} ${mi.label}（${mi.detail}）`;
 
   updateQuizMeta();
+  updateBanner();
 }
 
-function check(){
+function checkAnswer(){
   if(locked) return;
-
   const q = pool[index];
-  const y = normalize($("answer").value);
 
+  const y = normalizeYear($("answer").value);
   if(y === null){
-    showMsg("ng","数字を入力してください");
+    setMessage("ng", "数字を入力してください（例：57）");
     return;
   }
 
   locked = true;
 
+  const st = ensureStat(q.id);
+  st.attempt += 1;
+
   if(y === q.year){
+    st.correct += 1;
+    st.streak += 1;
     correct++;
     wrongMap.delete(q.id);
-    showMsg("ok",`○ 正解！ ${q.year}年`);
+    beep(true);
+    setMessage("ok", `○ 正解！ <b>${q.year}年</b>`);
   }else{
+    st.wrong += 1;
+    st.streak = 0;
     wrong++;
-    wrongMap.set(q.id,{...q,last:y});
-    showMsg("ng",`× 不正解。正解は ${q.year}年`);
+    wrongMap.set(q.id, { id:q.id, event:q.event, year:q.year, lastInput:y });
+    beep(false);
+    setMessage("ng", `× 不正解。正解は <b>${q.year}年</b> です。`);
   }
 
-  // ★ 判定直後にカウンタを更新（これが無かったため途中で増えなかった）
+  stats[q.id] = st;
+  saveStats(stats);
+
   updateQuizMeta();
+  updateBanner();
 
   setTimeout(()=>{
     index++;
     showQuestion();
-  }, 1000);
+  }, 1050);
 }
 
-function finish(){
-  showResult();
+function finishQuiz(){
+  showView("resultView");
+
+  const total = pool.length || 0;
+  const rate = total ? Math.round((correct/total)*100) : 0;
 
   $("rCorrect").textContent = String(correct);
-  $("rWrong").textContent = String(wrong);
-  $("rTotal").textContent = String(pool.length);
-  $("rRate").textContent = pool.length ? String(Math.round(correct / pool.length * 100)) : "0";
+  $("rWrong").textContent   = String(wrong);
+  $("rTotal").textContent   = String(total);
+  $("rRate").textContent    = String(rate);
 
-  const list = $("wrongList");
-  list.innerHTML = "";
+  const ws = Array.from(wrongMap.values());
+  const ul = $("wrongList");
+  ul.innerHTML = "";
 
-  const ws = [...wrongMap.values()];
-  $("noWrong").style.display = ws.length ? "none" : "block";
+  if(ws.length === 0){
+    $("noWrong").style.display = "block";
+    $("retryWrongBtn").disabled = true;
+    $("retryWrongBtn").style.opacity = 0.6;
+  }else{
+    $("noWrong").style.display = "none";
+    $("retryWrongBtn").disabled = false;
+    $("retryWrongBtn").style.opacity = 1;
 
-  ws.forEach(w=>{
-    const li = document.createElement("li");
-    li.textContent = `${w.event} → ${w.year}年（入力:${w.last}）`;
-    list.appendChild(li);
-  });
+    for(const item of ws){
+      const mi = masteryInfo(item.id);
+      const li = document.createElement("li");
+      li.innerHTML = `${mi.icon} <b>${item.event}</b> → 正解：<b>${item.year}年</b>（入力：${item.lastInput}）`;
+      ul.appendChild(li);
+    }
+  }
+
+  updateBanner();
 }
 
-/* ========= スタート / 再スタート ========= */
-function start(base){
-  pool = buildPool(base);
+function startWithQuestions(baseQuestions){
+  pool = buildPool(baseQuestions);
   index = 0;
   correct = 0;
   wrong = 0;
   locked = false;
   wrongMap = new Map();
+  currentBaseIds = baseQuestions.map(x=>x.id);
 
-  showQuiz();
-  updateQuizMeta();
+  showView("quizView");
   showQuestion();
 }
 
-/* ========= イベント ========= */
-$("startBtn").onclick = () => {
-  const s = normalize($("startYear").value);
-  const e = normalize($("endYear").value);
-  useRandom = $("randomToggle").checked;
+/* ===== Notebook ===== */
+let notebookFilter = "all";
+function notebookFilteredQuestions(){
+  const out = [];
+  for(const q of ALL){
+    const mi = masteryInfo(q.id);
+    if(notebookFilter === "low" && mi.icon !== "🧪") continue;
+    if(notebookFilter === "mid" && mi.icon !== "🪄") continue;
+    if(notebookFilter === "hi"  && !(mi.icon === "✨" || mi.icon === "🏆")) continue;
+    out.push({q, mi, st: ensureStat(q.id)});
+  }
+  return out;
+}
+function renderNotebook(){
+  const rows = notebookFilteredQuestions();
 
-  if (s !== null && e !== null && s > e) {
+  $("nbFilterChip").textContent = `フィルタ：${
+    notebookFilter==="all" ? "全部" :
+    notebookFilter==="low" ? "🧪 調合中" :
+    notebookFilter==="mid" ? "🪄 習得中" : "✨ 安定以上"
+  }`;
+
+  const agg = overallAggregate();
+  const level = computeOverallLevel();
+  const rate = agg.totalAttempt ? Math.round((agg.totalCorrect/agg.totalAttempt)*100) : 0;
+  $("nbSummaryChip").textContent = `総合 ${overallTitleText(level)} / 正答率 ${rate}% / 累計 ${agg.totalCorrect}/${agg.totalAttempt} / 評価対象 ${agg.counted}問`;
+
+  const table = $("nbTable");
+  table.innerHTML = "";
+
+  if(rows.length === 0){
+    $("notebookEmpty").style.display = "block";
+    return;
+  }
+  $("notebookEmpty").style.display = "none";
+
+  const order = {"❔":0, "🧪":1, "🪄":2, "✨":3, "🏆":4};
+  rows.sort((a,b)=>{
+    const oa = order[a.mi.icon] ?? 9;
+    const ob = order[b.mi.icon] ?? 9;
+    if(oa !== ob) return oa - ob;
+    const ra = rateOf(a.st) ?? -1;
+    const rb = rateOf(b.st) ?? -1;
+    return ra - rb;
+  });
+
+  for(const {q, mi, st} of rows){
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.innerHTML = `
+      <div class="rowcard">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="qtitle">${mi.icon} <span class="mono">[${q.year}]</span> ${q.event}</div>
+            <div class="qsub">
+              得意度：<span class="chip ${mi.cls}" style="margin-left:6px;">${mi.icon} ${mi.label}</span>
+              <span class="muted mono" style="margin-left:8px;">出題 ${st.attempt}回 / 正解 ${st.correct}回 / 連続正解 ${st.streak}</span>
+            </div>
+          </div>
+          <div class="right">
+            <button class="primary tiny" data-train-one="${q.id}">この呪文を特訓</button>
+          </div>
+        </div>
+      </div>
+    `;
+    tr.appendChild(td);
+    table.appendChild(tr);
+  }
+
+  table.querySelectorAll("[data-train-one]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const qid = btn.getAttribute("data-train-one");
+      const base = ALL.filter(x => x.id === qid);
+      startWithQuestions(base);
+    });
+  });
+}
+
+/* ===== Events ===== */
+$("checkBtn").addEventListener("click", checkAnswer);
+document.addEventListener("keydown", e=>{
+  if(e.key === "Enter" && !$("quizView").classList.contains("hidden")){
+    checkAnswer();
+  }
+});
+$("quitBtn").addEventListener("click", ()=>{
+  if(!confirm("途中で終了しますか？\n（ここまでの成績を表示します）")) return;
+  finishQuiz();
+});
+
+$("startBtn").addEventListener("click", ()=>{
+  const s = normalizeYear($("startYear").value);
+  const e = normalizeYear($("endYear").value);
+
+  useRandom = $("randomToggle").checked;
+  soundOn   = $("soundToggle").checked;
+
+  prefs.useRandom = useRandom;
+  prefs.soundOn   = soundOn;
+  savePrefs(prefs);
+
+  if(s !== null && e !== null && s > e){
     $("startMsg").className = "msg ng";
     $("startMsg").textContent = "開始年が終了年より大きいです。";
     $("startMsg").style.display = "block";
@@ -288,55 +798,96 @@ $("startBtn").onclick = () => {
   });
 
   if(filtered.length === 0){
-    $("startMsg").className="msg ng";
-    $("startMsg").textContent="該当する問題がありません";
-    $("startMsg").style.display="block";
+    $("startMsg").className = "msg ng";
+    $("startMsg").textContent = "該当する問題がありません";
+    $("startMsg").style.display = "block";
     return;
   }
 
-  $("startMsg").style.display="none";
-  start(filtered);
-};
-
-$("startAllBtn").onclick = () => {
-  useRandom = $("randomToggle").checked;
-  $("startMsg").style.display="none";
-  start(ALL);
-};
-
-$("retryAllBtn").onclick = () => {
-  // 「同条件」＝現在の pool の元データで再出題（ランダムなら再シャッフル）
-  // poolは出題用の並び替え後なので、元データを復元するために id で ALL から取り直す
-  const ids = new Set(pool.map(x => x.id));
-  const base = ALL.filter(x => ids.has(x.id));
-  start(base);
-};
-
-$("retryWrongBtn").onclick = () => {
-  const ws = [...wrongMap.values()];
-  if (ws.length === 0) return;
-  // 間違いだけ復習（ランダム設定は維持）
-  start(ws);
-};
-
-$("backBtn").onclick = () => {
-  showStart();
-};
-
-$("checkBtn").onclick = check;
-
-$("quitBtn").onclick = () => {
-  if (!confirm("途中で終了しますか？\n（ここまでの成績を表示します）")) return;
-  finish();
-};
-
-document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !$("quizView").classList.contains("hidden")) check();
+  $("startMsg").style.display = "none";
+  startWithQuestions(filtered);
 });
 
-/* 初期表示 */
+$("startAllBtn").addEventListener("click", ()=>{
+  useRandom = $("randomToggle").checked;
+  soundOn   = $("soundToggle").checked;
+
+  prefs.useRandom = useRandom;
+  prefs.soundOn   = soundOn;
+  savePrefs(prefs);
+
+  $("startMsg").style.display = "none";
+  startWithQuestions(ALL);
+});
+
+$("retryAllBtn").addEventListener("click", ()=>{
+  if(Array.isArray(currentBaseIds) && currentBaseIds.length){
+    const ids = new Set(currentBaseIds);
+    const base = ALL.filter(q => ids.has(q.id));
+    startWithQuestions(base);
+  }else{
+    startWithQuestions(ALL);
+  }
+});
+
+$("retryWrongBtn").addEventListener("click", ()=>{
+  const ws = Array.from(wrongMap.values());
+  if(ws.length === 0) return;
+  const ids = new Set(ws.map(x=>x.id));
+  const base = ALL.filter(q => ids.has(q.id));
+  startWithQuestions(base);
+});
+
+$("backBtn").addEventListener("click", ()=>{
+  showView("startView");
+  updateBanner();
+});
+
+$("openNotebookBtn").addEventListener("click", ()=>{
+  notebookFilter = "all";
+  showView("notebookView");
+  renderNotebook();
+  updateBanner();
+});
+$("openNotebookFromResultBtn").addEventListener("click", ()=>{
+  notebookFilter = "all";
+  showView("notebookView");
+  renderNotebook();
+  updateBanner();
+});
+$("closeNotebookBtn").addEventListener("click", ()=>{
+  showView("startView");
+  updateBanner();
+});
+$("filterAllBtn").addEventListener("click", ()=>{ notebookFilter="all"; renderNotebook(); });
+$("filterLowBtn").addEventListener("click", ()=>{ notebookFilter="low"; renderNotebook(); });
+$("filterMidBtn").addEventListener("click", ()=>{ notebookFilter="mid"; renderNotebook(); });
+$("filterHiBtn").addEventListener("click", ()=>{ notebookFilter="hi"; renderNotebook(); });
+
+$("trainFromNotebookBtn").addEventListener("click", ()=>{
+  const rows = notebookFilteredQuestions().map(x=>x.q);
+  if(rows.length === 0){
+    alert("表示中の問題がありません。");
+    return;
+  }
+  startWithQuestions(rows);
+});
+
+$("resetAllBtn").addEventListener("click", ()=>{
+  if(!confirm("学習データ（得意度・累計）をリセットしますか？")) return;
+  stats = {};
+  saveStats(stats);
+  updateBanner();
+  alert("リセットしました。");
+});
+
+/* ===== init ===== */
 $("totalCount").textContent = String(ALL.length);
-showStart();
+$("randomToggle").checked = useRandom;
+$("soundToggle").checked  = soundOn;
+
+updateBanner();
+showView("startView");
 </script>
 </body>
 </html>
