@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ v1.4-dev</title>
+  <title>歴史 年号クイズ v1.5-dev</title>
   <style>
     body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background:#f6f7fb; margin:0; }
     .wrap { max-width: 760px; margin: 0 auto; padding: 20px; }
@@ -28,13 +28,14 @@
     .hidden { display:none; }
     .panel { background:#f7f9ff; border:1px solid #e3e8ff; padding:12px; border-radius:12px; margin-bottom:14px; }
     .label { font-size:13px; color:#444; margin-bottom:6px; }
+    label { font-size:14px; }
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
 
-    <!-- ===== スタート画面（絞り込み） ===== -->
+    <!-- ===== スタート画面 ===== -->
     <div id="startView">
       <h1>歴史 年号クイズ（スタート設定）</h1>
 
@@ -43,25 +44,39 @@
         <div class="row">
           <input id="startYear" class="narrow" type="text" inputmode="numeric" placeholder="開始（例：57）" />
           <input id="endYear" class="narrow" type="text" inputmode="numeric" placeholder="終了（例：1485）" />
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <input type="checkbox" id="randomToggle" checked />
+            ランダム出題する
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
           <button id="startBtn" class="primary">スタート</button>
           <button id="startAllRangeBtn" class="ghost">範囲なしでスタート</button>
         </div>
-        <div class="small">空欄OK：開始だけ / 終了だけでも絞れます（全角数字OK）。</div>
+
+        <div class="small">
+          ・ランダムOFF時は年号順（昇順）で出題<br>
+          ・設定は復習／再スタートでも引き継がれます
+        </div>
       </div>
 
       <div id="startMessage" class="msg"></div>
 
       <div class="meta">
         <div>登録問題数：<span id="totalQuestions">0</span></div>
-        <div>選択中の範囲：<span id="rangeLabel">-</span></div>
       </div>
     </div>
 
     <!-- ===== クイズ画面 ===== -->
     <div id="quizView" class="hidden">
-      <h1>歴史 年号クイズ（出来事 → 年号入力）
+      <h1>
+        歴史 年号クイズ
         <span id="modeBadge" class="badge">全問</span>
-        <span id="rangeBadge" class="badge">範囲: -</span>
+        <span id="orderBadge" class="badge">-</span>
       </h1>
 
       <div id="event" class="event"></div>
@@ -78,10 +93,7 @@
         <div>正解：<span id="correct">0</span></div>
         <div>不正解：<span id="wrong">0</span></div>
         <div>進捗：<span id="progress">-</span></div>
-        <div>出題数：<span id="poolSize">-</span></div>
       </div>
-
-      <div class="small">Enterで判定（※判定後は自動で次の問題に進みます）</div>
     </div>
 
     <!-- ===== 結果画面 ===== -->
@@ -93,7 +105,6 @@
         <div>不正解：<b><span id="rWrong">0</span></b></div>
         <div>正答率：<b><span id="rRate">0</span>%</b></div>
         <div>問題数：<b><span id="rTotal">0</span></b></div>
-        <div>範囲：<b><span id="rRange">-</span></b></div>
       </div>
 
       <h2>間違えた問題</h2>
@@ -103,12 +114,9 @@
       <h2>次はどうする？</h2>
       <div class="row">
         <button id="retryWrongBtn" class="primary">間違いだけ復習</button>
-        <button id="retryAllBtn" class="ghost">同じ範囲でもう一回</button>
-        <button id="backToStartBtn" class="ghost">範囲を選び直す</button>
-        <button id="resetScoreBtn" class="danger">成績リセット</button>
+        <button id="retryAllBtn" class="ghost">同じ条件でもう一回</button>
+        <button id="backToStartBtn" class="ghost">スタートに戻る</button>
       </div>
-
-      <div class="small">※「間違いだけ復習」は、間違いが0件のときはできません。</div>
     </div>
 
   </div>
@@ -119,327 +127,184 @@
    問題データ
 ================================ */
 const QUESTIONS = [
-  { id: "q001", year: 57,  event: "倭の奴国の王が後漢に使いを送る" },
-  { id: "q002", year: 239, event: "卑弥呼が魏に使いを送る" },
-  { id: "q003", year: 538, event: "百済から仏教の伝来" },
-  { id: "q004", year: 593, event: "聖徳太子が推古天皇の政治に参加" },
-  { id: "q005", year: 603, event: "冠位十二階の制度が定められる" },
-  { id: "q006", year: 604, event: "十七条の憲法が定められる" },
-  { id: "q007", year: 607, event: "遣隋使の派遣（小野妹子ら）" },
-  { id: "q008", year: 630, event: "第1回遣唐使の派遣" },
-  { id: "q009", year: 645, event: "大化の改新の始まり" },
-  { id: "q010", year: 663, event: "白村江の戦いがおこる" },
-  { id: "q011", year: 672, event: "壬申の乱がおこる" },
-  { id: "q012", year: 694, event: "都が藤原京にうつる" },
-  { id: "q013", year: 701, event: "大宝律令の完成" },
-  { id: "q014", year: 708, event: "和同開珎がつくられ始める" },
-  { id: "q015", year: 710, event: "都が平城京にうつる" },
-  { id: "q016", year: 712, event: "古事記の完成" },
-  { id: "q017", year: 720, event: "日本書紀の完成" },
-  { id: "q018", year: 723, event: "三世一身法が出される" },
-  { id: "q019", year: 741, event: "聖武天皇が国分寺と国分尼寺の建立を命じる" },
-  { id: "q020", year: 743, event: "墾田永年私財法が出される" },
-  { id: "q021", year: 752, event: "東大寺の大仏が完成" },
-  { id: "q022", year: 794, event: "都が平安京にうつる" },
-  { id: "q023", year: 866, event: "藤原良房が摂政となる" },
-  { id: "q024", year: 887, event: "藤原基経が関白となる" },
-  { id: "q025", year: 894, event: "遣唐使の停止" },
-  { id: "q026", year: 939, event: "平将門の乱がおこる" },
-  { id: "q027", year: 939, event: "藤原純友の乱がおこる" },
-  { id: "q028", year: 988, event: "尾張国の国司が訴えられる" },
-  { id: "q029", year: 1016, event: "藤原道長が摂政となる" },
-  { id: "q030", year: 1051, event: "前九年合戦が始まる" },
-  { id: "q031", year: 1083, event: "後三年合戦が始まる" },
-  { id: "q032", year: 1086, event: "白河上皇が院政を始める" },
-  { id: "q033", year: 1156, event: "保元の乱がおこる" },
-  { id: "q034", year: 1159, event: "平治の乱がおこる" },
-  { id: "q035", year: 1167, event: "平清盛が太政大臣となる" },
-  { id: "q036", year: 1185, event: "壇ノ浦の戦いがおこる" },
-  { id: "q037", year: 1192, event: "源頼朝が征夷大将軍となり鎌倉幕府を開く" },
-  { id: "q038", year: 1221, event: "承久の乱がおこる" },
-  { id: "q039", year: 1232, event: "北条泰時が御成敗式目を制定する" },
-  { id: "q040", year: 1274, event: "文永の役がおこる" },
-  { id: "q041", year: 1281, event: "弘安の役がおこる" },
-  { id: "q042", year: 1297, event: "永仁の徳政令が出される" },
-  { id: "q043", year: 1333, event: "鎌倉幕府が滅亡する" },
-  { id: "q044", year: 1334, event: "後醍醐天皇が建武の新政を始める" },
-  { id: "q045", year: 1338, event: "足利尊氏が征夷大将軍となり室町幕府を開く" },
-  { id: "q046", year: 1392, event: "足利義満が南北朝を統一する" },
-  { id: "q047", year: 1404, event: "勘合貿易が始まる" },
-  { id: "q048", year: 1428, event: "正長の土一揆がおこる" },
-  { id: "q049", year: 1467, event: "応仁の乱が始まる" },
-  { id: "q050", year: 1485, event: "山城の国一揆がおこる" },
+  { id:"q001", year:57, event:"倭の奴国の王が後漢に使いを送る" },
+  { id:"q002", year:239, event:"卑弥呼が魏に使いを送る" },
+  { id:"q003", year:538, event:"百済から仏教の伝来" },
+  { id:"q004", year:593, event:"聖徳太子が推古天皇の政治に参加" },
+  { id:"q005", year:603, event:"冠位十二階の制度が定められる" },
+  { id:"q006", year:604, event:"十七条の憲法が定められる" },
+  { id:"q007", year:607, event:"遣隋使の派遣" },
+  { id:"q008", year:630, event:"第1回遣唐使の派遣" },
+  { id:"q009", year:645, event:"大化の改新" },
+  { id:"q010", year:663, event:"白村江の戦い" },
+  { id:"q011", year:672, event:"壬申の乱" },
+  { id:"q012", year:701, event:"大宝律令の完成" },
+  { id:"q013", year:710, event:"平城京に遷都" },
+  { id:"q014", year:794, event:"平安京に遷都" },
+  { id:"q015", year:1192, event:"鎌倉幕府成立" },
 ];
 
 /* ===============================
    状態
 ================================ */
 let pool = [];
-let mode = "all";
 let index = 0;
-let locked = false;
 let correct = 0;
 let wrong = 0;
+let locked = false;
 let wrongMap = new Map();
-let rangeStart = null;
-let rangeEnd = null;
+
+let useRandom = true;
 
 /* ===============================
-   要素
+   ユーティリティ
 ================================ */
-const startView = document.getElementById("startView");
-const quizView = document.getElementById("quizView");
-const resultView = document.getElementById("resultView");
-const startYearEl = document.getElementById("startYear");
-const endYearEl = document.getElementById("endYear");
-const startBtn = document.getElementById("startBtn");
-const startAllRangeBtn = document.getElementById("startAllRangeBtn");
-const startMessage = document.getElementById("startMessage");
-const totalQuestionsEl = document.getElementById("totalQuestions");
-const rangeLabelEl = document.getElementById("rangeLabel");
-const modeBadge = document.getElementById("modeBadge");
-const rangeBadge = document.getElementById("rangeBadge");
-const elEvent = document.getElementById("event");
-const elAnswer = document.getElementById("answer");
-const elMsg = document.getElementById("message");
-const elCorrect = document.getElementById("correct");
-const elWrong = document.getElementById("wrong");
-const elProgress = document.getElementById("progress");
-const elPoolSize = document.getElementById("poolSize");
-const elCheckBtn = document.getElementById("checkBtn");
-const quitBtn = document.getElementById("quitBtn");
-const rCorrect = document.getElementById("rCorrect");
-const rWrong = document.getElementById("rWrong");
-const rRate = document.getElementById("rRate");
-const rTotal = document.getElementById("rTotal");
-const rRange = document.getElementById("rRange");
-const wrongList = document.getElementById("wrongList");
-const wrongEmpty = document.getElementById("wrongEmpty");
-const retryWrongBtn = document.getElementById("retryWrongBtn");
-const retryAllBtn = document.getElementById("retryAllBtn");
-const backToStartBtn = document.getElementById("backToStartBtn");
-const resetScoreBtn = document.getElementById("resetScoreBtn");
-
-/* ===============================
-   共通関数
-================================ */
-function normalizeYear(input) {
-  if (!input) return null;
-  const half = String(input).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
-  const digits = half.replace(/[^0-9]/g, "");
-  if (!digits) return null;
-  return Number(digits);
+function normalizeYear(v){
+  if(!v) return null;
+  const h = String(v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0));
+  const d = h.replace(/[^0-9]/g,"");
+  return d ? Number(d) : null;
 }
-function formatRangeLabel(s, e) {
-  const a = (s === null) ? "指定なし" : String(s);
-  const b = (e === null) ? "指定なし" : String(e);
-  return `${a}〜${b}`;
-}
-function setMessage(type, html) {
-  elMsg.style.display = "block";
-  elMsg.className = "msg " + (type === "ok" ? "ok" : "ng");
-  elMsg.innerHTML = html;
-}
-function clearMessage() {
-  elMsg.style.display = "none";
-  elMsg.className = "msg";
-  elMsg.innerHTML = "";
-}
-function showView(which) {
-  startView.classList.add("hidden");
-  quizView.classList.add("hidden");
-  resultView.classList.add("hidden");
-  if (which === "start") startView.classList.remove("hidden");
-  if (which === "quiz") quizView.classList.remove("hidden");
-  if (which === "result") resultView.classList.remove("hidden");
-}
-function updateMeta() {
-  elCorrect.textContent = String(correct);
-  elWrong.textContent = String(wrong);
-  elProgress.textContent = `${index + 1} / ${pool.length}`;
-  elPoolSize.textContent = String(pool.length);
-}
-
-/* ★ ランダム化（Fisher–Yates） */
-function shuffle(arr) {
+function shuffle(arr){
   const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
   }
   return a;
 }
 
-function applyRangeFilter(items, s, e) {
-  return items.filter(q => {
-    if (s !== null && q.year < s) return false;
-    if (e !== null && q.year > e) return false;
-    return true;
-  });
+/* ===============================
+   出題準備
+================================ */
+function buildPool(base){
+  let arr = base.slice();
+  if(useRandom){
+    arr = shuffle(arr);
+  }else{
+    arr.sort((a,b)=>a.year-b.year);
+  }
+  return arr;
 }
 
 /* ===============================
    クイズ進行
 ================================ */
-function showQuestion() {
-  if (index >= pool.length) {
-    finishQuiz();
+function showQuestion(){
+  if(index>=pool.length){ finishQuiz(); return; }
+  document.getElementById("event").textContent = pool[index].event;
+  document.getElementById("answer").value="";
+  document.getElementById("answer").focus();
+  document.getElementById("message").style.display="none";
+  locked=false;
+  document.getElementById("progress").textContent = `${index+1} / ${pool.length}`;
+  document.getElementById("orderBadge").textContent = useRandom ? "ランダム" : "年号順";
+}
+function checkAnswer(){
+  if(locked) return;
+  const q = pool[index];
+  const y = normalizeYear(document.getElementById("answer").value);
+  if(y===null){
+    showMsg("ng","数字を入力してください");
     return;
   }
-  const q = pool[index];
-  modeBadge.textContent = (mode === "wrong") ? "復習（間違いのみ）" : "全問";
-  rangeBadge.textContent = `範囲: ${formatRangeLabel(rangeStart, rangeEnd)}`;
-  elEvent.textContent = q.event;
-  elAnswer.value = "";
-  elAnswer.focus();
-  clearMessage();
-  locked = false;
-  updateMeta();
-}
-
-function checkAnswer() {
-  if (locked) return;
-  const q = pool[index];
-  const y = normalizeYear(elAnswer.value);
-  if (y === null) { setMessage("ng", "数字を入力してください（例：57）"); return; }
-  locked = true;
-  if (y === q.year) {
+  locked=true;
+  if(y===q.year){
     correct++;
-    setMessage("ok", `○ 正解！ <b>${q.year}年</b>`);
+    showMsg("ok",`○ 正解！ ${q.year}年`);
     wrongMap.delete(q.id);
-  } else {
+  }else{
     wrong++;
-    setMessage("ng", `× 不正解。正解は <b>${q.year}年</b> です。`);
-    wrongMap.set(q.id, { id: q.id, event: q.event, year: q.year, lastInput: y });
+    showMsg("ng",`× 不正解。正解は ${q.year}年`);
+    wrongMap.set(q.id,{...q,lastInput:y});
   }
-  updateMeta();
-  setTimeout(() => { index++; showQuestion(); }, 1200);
+  setTimeout(()=>{ index++; showQuestion(); },1200);
 }
+function showMsg(type,text){
+  const m=document.getElementById("message");
+  m.className="msg "+(type==="ok"?"ok":"ng");
+  m.textContent=text;
+  m.style.display="block";
+}
+function finishQuiz(){
+  document.getElementById("quizView").classList.add("hidden");
+  document.getElementById("resultView").classList.remove("hidden");
+  document.getElementById("rCorrect").textContent=correct;
+  document.getElementById("rWrong").textContent=wrong;
+  document.getElementById("rTotal").textContent=pool.length;
+  document.getElementById("rRate").textContent=
+    Math.round(correct/pool.length*100)||0;
 
-function finishQuiz() {
-  showView("result");
-  const total = pool.length;
-  const rate = total === 0 ? 0 : Math.round((correct / total) * 100);
-  rCorrect.textContent = String(correct);
-  rWrong.textContent = String(wrong);
-  rRate.textContent = String(rate);
-  rTotal.textContent = String(total);
-  rRange.textContent = formatRangeLabel(rangeStart, rangeEnd);
-
-  wrongList.innerHTML = "";
-  const wrongItems = Array.from(wrongMap.values()).filter(x => {
-    if (rangeStart !== null && x.year < rangeStart) return false;
-    if (rangeEnd !== null && x.year > rangeEnd) return false;
-    return true;
-  });
-  if (wrongItems.length === 0) {
-    wrongEmpty.style.display = "block";
-    retryWrongBtn.disabled = true;
-  } else {
-    wrongEmpty.style.display = "none";
-    retryWrongBtn.disabled = false;
-    for (const item of wrongItems) {
-      const li = document.createElement("li");
-      li.innerHTML = `${item.event} → <b>${item.year}年</b>（入力：${item.lastInput}）`;
-      wrongList.appendChild(li);
-    }
+  const ul=document.getElementById("wrongList");
+  ul.innerHTML="";
+  const ws=[...wrongMap.values()];
+  if(ws.length===0){
+    document.getElementById("wrongEmpty").style.display="block";
+  }else{
+    document.getElementById("wrongEmpty").style.display="none";
+    ws.forEach(w=>{
+      const li=document.createElement("li");
+      li.textContent=`${w.event} → ${w.year}年（入力:${w.lastInput}）`;
+      ul.appendChild(li);
+    });
   }
-}
-
-function quitQuiz() {
-  if (!confirm("途中で終了しますか？\n（ここまでの成績を表示します）")) return;
-  locked = true;
-  finishQuiz();
 }
 
 /* ===============================
-   スタート / リスタート（★毎回シャッフル）
+   スタート／復習
 ================================ */
-function startWithRange(s, e) {
-  rangeStart = s; rangeEnd = e;
-  const filtered = applyRangeFilter(QUESTIONS, rangeStart, rangeEnd);
-  if (filtered.length === 0) {
-    showView("start");
-    startMessage.style.display = "block";
-    startMessage.className = "msg ng";
-    startMessage.textContent = "この範囲に該当する問題がありません。";
-    return;
-  }
-  mode = "all";
-  pool = shuffle(filtered);      // ★ ランダム
-  index = 0; locked = false; correct = 0; wrong = 0; wrongMap = new Map();
-  startMessage.style.display = "none";
-  showView("quiz");
+function startQuiz(base){
+  pool = buildPool(base);
+  index=0; correct=0; wrong=0; wrongMap=new Map();
+  document.getElementById("startView").classList.add("hidden");
+  document.getElementById("resultView").classList.add("hidden");
+  document.getElementById("quizView").classList.remove("hidden");
   showQuestion();
-}
-
-function restartSameRangeAll() {
-  startWithRange(rangeStart, rangeEnd); // ★ 再シャッフル
-}
-
-function startWrongOnly() {
-  const wrongItems = Array.from(wrongMap.values());
-  if (wrongItems.length === 0) return;
-  const wrongIds = new Set(wrongItems.map(x => x.id));
-  const candidates = QUESTIONS.filter(q => wrongIds.has(q.id));
-  const filtered = applyRangeFilter(candidates, rangeStart, rangeEnd);
-  if (filtered.length === 0) return;
-  mode = "wrong";
-  pool = shuffle(filtered);      // ★ ランダム
-  index = 0; locked = false; correct = 0; wrong = 0;
-  showView("quiz");
-  showQuestion();
-}
-
-function backToStart() {
-  showView("start");
-  rangeLabelEl.textContent = formatRangeLabel(rangeStart, rangeEnd);
-  totalQuestionsEl.textContent = String(QUESTIONS.length);
 }
 
 /* ===============================
    イベント
 ================================ */
-elCheckBtn.addEventListener("click", checkAnswer);
-quitBtn.addEventListener("click", quitQuiz);
-document.addEventListener("keydown", e => {
-  if (quizView.classList.contains("hidden")) return;
-  if (e.key === "Enter") checkAnswer();
-});
-startBtn.addEventListener("click", () => {
-  const s = normalizeYear(startYearEl.value);
-  const e = normalizeYear(endYearEl.value);
-  if (s !== null && e !== null && s > e) {
-    startMessage.style.display = "block";
-    startMessage.className = "msg ng";
-    startMessage.textContent = "開始年が終了年より大きいです。";
+document.getElementById("startBtn").onclick=()=>{
+  const s=normalizeYear(startYear.value);
+  const e=normalizeYear(endYear.value);
+  useRandom=document.getElementById("randomToggle").checked;
+  const filtered=QUESTIONS.filter(q=>{
+    if(s!==null && q.year<s) return false;
+    if(e!==null && q.year>e) return false;
+    return true;
+  });
+  if(filtered.length===0){
+    startMessage.textContent="該当する問題がありません";
+    startMessage.className="msg ng";
+    startMessage.style.display="block";
     return;
   }
-  startWithRange(s, e);
-});
-startAllRangeBtn.addEventListener("click", () => {
-  startYearEl.value = ""; endYearEl.value = "";
-  startWithRange(null, null);
-});
-retryAllBtn.addEventListener("click", restartSameRangeAll);
-retryWrongBtn.addEventListener("click", startWrongOnly);
-backToStartBtn.addEventListener("click", backToStart);
-resetScoreBtn.addEventListener("click", () => {
-  correct = 0; wrong = 0; wrongMap = new Map();
-  rangeStart = null; rangeEnd = null;
-  startYearEl.value = ""; endYearEl.value = "";
-  startMessage.style.display = "none";
-  totalQuestionsEl.textContent = String(QUESTIONS.length);
-  rangeLabelEl.textContent = "-";
-  showView("start");
+  startQuiz(filtered);
+};
+document.getElementById("startAllRangeBtn").onclick=()=>{
+  useRandom=document.getElementById("randomToggle").checked;
+  startQuiz(QUESTIONS);
+};
+document.getElementById("retryAllBtn").onclick=()=>startQuiz(pool.map(p=>p));
+document.getElementById("retryWrongBtn").onclick=()=>{
+  const ws=[...wrongMap.values()];
+  if(ws.length>0) startQuiz(ws);
+};
+document.getElementById("backToStartBtn").onclick=()=>{
+  document.getElementById("resultView").classList.add("hidden");
+  document.getElementById("startView").classList.remove("hidden");
+};
+document.getElementById("checkBtn").onclick=checkAnswer;
+document.getElementById("quitBtn").onclick=finishQuiz;
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !document.getElementById("quizView").classList.contains("hidden")){
+    checkAnswer();
+  }
 });
 
-/* ===============================
-   初期表示
-================================ */
-totalQuestionsEl.textContent = String(QUESTIONS.length);
-rangeLabelEl.textContent = "-";
-showView("start");
+/* 初期表示 */
+document.getElementById("totalQuestions").textContent=QUESTIONS.length;
 </script>
 </body>
 </html>
