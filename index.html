@@ -3,32 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ v1.5-dev</title>
+  <title>歴史 年号クイズ v2.0</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background:#f6f7fb; margin:0; }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 20px; }
+    body {
+      font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      background:#f6f7fb; margin:0;
+    }
+    .wrap { max-width:760px; margin:0 auto; padding:20px; }
     .card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 6px 20px rgba(0,0,0,.06); }
     h1 { font-size:18px; margin:0 0 12px; }
     h2 { font-size:16px; margin:18px 0 10px; }
     .event { font-size:22px; line-height:1.5; padding:14px; background:#f3f5ff; border-radius:12px; margin-bottom:14px; }
     .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    input { font-size:18px; padding:10px 12px; width:220px; border-radius:10px; border:1px solid #cfd3e3; }
+    input { font-size:18px; padding:10px 12px; border-radius:10px; border:1px solid #cfd3e3; }
     .narrow { width:160px; }
     button { font-size:16px; padding:10px 14px; border-radius:10px; border:0; cursor:pointer; }
     .primary { background:#2f6fed; color:#fff; }
     .ghost { background:#eef2ff; }
     .danger { background:#ffebee; }
-    .msg { margin-top:12px; padding:12px; border-radius:10px; font-size:18px; display:none; }
+    .msg { margin-top:12px; padding:12px; border-radius:10px; font-size:16px; display:none; }
     .ok { background:#e8f5e9; }
     .ng { background:#ffebee; }
     .meta { margin-top:14px; font-size:14px; color:#555; display:flex; gap:16px; flex-wrap:wrap; }
-    .small { color:#666; font-size:13px; margin-top:8px; }
-    ul { margin: 8px 0 0; padding-left: 18px; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#f1f3f8; font-size:12px; color:#444; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#f1f3f8; font-size:12px; }
     .hidden { display:none; }
-    .panel { background:#f7f9ff; border:1px solid #e3e8ff; padding:12px; border-radius:12px; margin-bottom:14px; }
-    .label { font-size:13px; color:#444; margin-bottom:6px; }
-    label { font-size:14px; }
+    ul { margin:8px 0 0; padding-left:18px; }
   </style>
 </head>
 <body>
@@ -39,52 +38,43 @@
     <div id="startView">
       <h1>歴史 年号クイズ（スタート設定）</h1>
 
-      <div class="panel">
-        <div class="label">出題範囲（開始年以上・終了年以下）</div>
-        <div class="row">
-          <input id="startYear" class="narrow" type="text" inputmode="numeric" placeholder="開始（例：57）" />
-          <input id="endYear" class="narrow" type="text" inputmode="numeric" placeholder="終了（例：1485）" />
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <label>
-            <input type="checkbox" id="randomToggle" checked />
-            ランダム出題する
-          </label>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <button id="startBtn" class="primary">スタート</button>
-          <button id="startAllRangeBtn" class="ghost">範囲なしでスタート</button>
-        </div>
-
-        <div class="small">
-          ・ランダムOFF時は年号順（昇順）で出題<br>
-          ・設定は復習／再スタートでも引き継がれます
-        </div>
+      <div class="row">
+        <input id="startYear" class="narrow" inputmode="numeric" placeholder="開始年（例：57）">
+        <input id="endYear" class="narrow" inputmode="numeric" placeholder="終了年（例：1485）">
       </div>
 
-      <div id="startMessage" class="msg"></div>
+      <div class="row" style="margin-top:10px;">
+        <label>
+          <input type="checkbox" id="randomToggle" checked>
+          ランダム出題
+        </label>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <button id="startBtn" class="primary">スタート</button>
+        <button id="startAllBtn" class="ghost">全問スタート</button>
+      </div>
+
+      <div id="startMsg" class="msg"></div>
 
       <div class="meta">
-        <div>登録問題数：<span id="totalQuestions">0</span></div>
+        <div>登録問題数：<span id="totalCount">0</span></div>
       </div>
     </div>
 
     <!-- ===== クイズ画面 ===== -->
     <div id="quizView" class="hidden">
       <h1>
-        歴史 年号クイズ
-        <span id="modeBadge" class="badge">全問</span>
-        <span id="orderBadge" class="badge">-</span>
+        年号クイズ
+        <span id="orderBadge" class="badge"></span>
       </h1>
 
       <div id="event" class="event"></div>
 
       <div class="row">
-        <input id="answer" type="text" inputmode="numeric" placeholder="年号を入力（例：57）" />
+        <input id="answer" inputmode="numeric" placeholder="年号を入力">
         <button id="checkBtn" class="primary">判定</button>
-        <button id="quitBtn" class="danger">途中で終了</button>
+        <button id="quitBtn" class="danger">途中終了</button>
       </div>
 
       <div id="message" class="msg"></div>
@@ -100,211 +90,166 @@
     <div id="resultView" class="hidden">
       <h1>結果</h1>
 
-      <div class="meta" style="font-size:15px;">
-        <div>正解：<b><span id="rCorrect">0</span></b></div>
-        <div>不正解：<b><span id="rWrong">0</span></b></div>
-        <div>正答率：<b><span id="rRate">0</span>%</b></div>
-        <div>問題数：<b><span id="rTotal">0</span></b></div>
+      <div class="meta">
+        <div>正解：<b><span id="rCorrect"></span></b></div>
+        <div>不正解：<b><span id="rWrong"></span></b></div>
+        <div>正答率：<b><span id="rRate"></span>%</b></div>
+        <div>問題数：<b><span id="rTotal"></span></b></div>
       </div>
 
       <h2>間違えた問題</h2>
-      <div id="wrongEmpty" class="small">間違いはありませんでした！</div>
+      <div id="noWrong" class="msg ok">間違いはありませんでした！</div>
       <ul id="wrongList"></ul>
 
-      <h2>次はどうする？</h2>
-      <div class="row">
+      <div class="row" style="margin-top:12px;">
         <button id="retryWrongBtn" class="primary">間違いだけ復習</button>
-        <button id="retryAllBtn" class="ghost">同じ条件でもう一回</button>
-        <button id="backToStartBtn" class="ghost">スタートに戻る</button>
+        <button id="retryAllBtn" class="ghost">同条件でもう一回</button>
+        <button id="backBtn" class="ghost">スタートに戻る</button>
       </div>
     </div>
 
   </div>
 </div>
 
-<script>
-/* ===============================
-   問題データ
-================================ */
-const QUESTIONS = [
-  { id:"q001", year:57, event:"倭の奴国の王が後漢に使いを送る" },
-  { id:"q002", year:239, event:"卑弥呼が魏に使いを送る" },
-  { id:"q003", year:538, event:"百済から仏教の伝来" },
-  { id:"q004", year:593, event:"聖徳太子が推古天皇の政治に参加" },
-  { id:"q005", year:603, event:"冠位十二階の制度が定められる" },
-  { id:"q006", year:604, event:"十七条の憲法が定められる" },
-  { id:"q007", year:607, event:"遣隋使の派遣" },
-  { id:"q008", year:630, event:"第1回遣唐使の派遣" },
-  { id:"q009", year:645, event:"大化の改新" },
-  { id:"q010", year:663, event:"白村江の戦い" },
-  { id:"q011", year:672, event:"壬申の乱" },
-  { id:"q012", year:701, event:"大宝律令の完成" },
-  { id:"q013", year:710, event:"平城京に遷都" },
-  { id:"q014", year:794, event:"平安京に遷都" },
-  { id:"q015", year:1192, event:"鎌倉幕府成立" },
-];
+<!-- ===== 問題データ ===== -->
+<script src="./questions.js"></script>
 
-/* ===============================
-   状態
-================================ */
+<script>
+/* ========= 状態 ========= */
+const ALL = window.QUESTIONS;
 let pool = [];
 let index = 0;
 let correct = 0;
 let wrong = 0;
 let locked = false;
 let wrongMap = new Map();
-
 let useRandom = true;
 
-/* ===============================
-   ユーティリティ
-================================ */
-function normalizeYear(v){
+/* ========= ユーティリティ ========= */
+const $ = id => document.getElementById(id);
+const normalize = v => {
   if(!v) return null;
   const h = String(v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0));
   const d = h.replace(/[^0-9]/g,"");
   return d ? Number(d) : null;
-}
-function shuffle(arr){
-  const a = arr.slice();
-  for(let i=a.length-1;i>0;i--){
+};
+const shuffle = a => {
+  const b = a.slice();
+  for(let i=b.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
+    [b[i],b[j]]=[b[j],b[i]];
   }
-  return a;
-}
+  return b;
+};
 
-/* ===============================
-   出題準備
-================================ */
+/* ========= 出題準備 ========= */
 function buildPool(base){
   let arr = base.slice();
-  if(useRandom){
-    arr = shuffle(arr);
-  }else{
-    arr.sort((a,b)=>a.year-b.year);
-  }
+  arr = useRandom ? shuffle(arr) : arr.sort((a,b)=>a.year-b.year);
   return arr;
 }
 
-/* ===============================
-   クイズ進行
-================================ */
+/* ========= クイズ進行 ========= */
 function showQuestion(){
-  if(index>=pool.length){ finishQuiz(); return; }
-  document.getElementById("event").textContent = pool[index].event;
-  document.getElementById("answer").value="";
-  document.getElementById("answer").focus();
-  document.getElementById("message").style.display="none";
+  if(index>=pool.length){ finish(); return; }
+  $("event").textContent = pool[index].event;
+  $("answer").value="";
+  $("answer").focus();
+  $("message").style.display="none";
   locked=false;
-  document.getElementById("progress").textContent = `${index+1} / ${pool.length}`;
-  document.getElementById("orderBadge").textContent = useRandom ? "ランダム" : "年号順";
+  $("progress").textContent = `${index+1} / ${pool.length}`;
+  $("orderBadge").textContent = useRandom ? "ランダム" : "年号順";
 }
-function checkAnswer(){
+function check(){
   if(locked) return;
   const q = pool[index];
-  const y = normalizeYear(document.getElementById("answer").value);
+  const y = normalize($("answer").value);
   if(y===null){
     showMsg("ng","数字を入力してください");
     return;
   }
   locked=true;
   if(y===q.year){
-    correct++;
+    correct++; wrongMap.delete(q.id);
     showMsg("ok",`○ 正解！ ${q.year}年`);
-    wrongMap.delete(q.id);
   }else{
-    wrong++;
+    wrong++; wrongMap.set(q.id,{...q,last:y});
     showMsg("ng",`× 不正解。正解は ${q.year}年`);
-    wrongMap.set(q.id,{...q,lastInput:y});
   }
-  setTimeout(()=>{ index++; showQuestion(); },1200);
+  setTimeout(()=>{ index++; showQuestion(); },1000);
 }
 function showMsg(type,text){
-  const m=document.getElementById("message");
+  const m=$("message");
   m.className="msg "+(type==="ok"?"ok":"ng");
   m.textContent=text;
   m.style.display="block";
 }
-function finishQuiz(){
-  document.getElementById("quizView").classList.add("hidden");
-  document.getElementById("resultView").classList.remove("hidden");
-  document.getElementById("rCorrect").textContent=correct;
-  document.getElementById("rWrong").textContent=wrong;
-  document.getElementById("rTotal").textContent=pool.length;
-  document.getElementById("rRate").textContent=
-    Math.round(correct/pool.length*100)||0;
+function finish(){
+  $("quizView").classList.add("hidden");
+  $("resultView").classList.remove("hidden");
+  $("rCorrect").textContent=correct;
+  $("rWrong").textContent=wrong;
+  $("rTotal").textContent=pool.length;
+  $("rRate").textContent=Math.round(correct/pool.length*100)||0;
 
-  const ul=document.getElementById("wrongList");
-  ul.innerHTML="";
+  const list=$("wrongList");
+  list.innerHTML="";
   const ws=[...wrongMap.values()];
-  if(ws.length===0){
-    document.getElementById("wrongEmpty").style.display="block";
-  }else{
-    document.getElementById("wrongEmpty").style.display="none";
-    ws.forEach(w=>{
-      const li=document.createElement("li");
-      li.textContent=`${w.event} → ${w.year}年（入力:${w.lastInput}）`;
-      ul.appendChild(li);
-    });
-  }
+  $("noWrong").style.display = ws.length ? "none":"block";
+  ws.forEach(w=>{
+    const li=document.createElement("li");
+    li.textContent=`${w.event} → ${w.year}年（入力:${w.last}）`;
+    list.appendChild(li);
+  });
 }
-
-/* ===============================
-   スタート／復習
-================================ */
-function startQuiz(base){
+function start(base){
   pool = buildPool(base);
   index=0; correct=0; wrong=0; wrongMap=new Map();
-  document.getElementById("startView").classList.add("hidden");
-  document.getElementById("resultView").classList.add("hidden");
-  document.getElementById("quizView").classList.remove("hidden");
+  $("startView").classList.add("hidden");
+  $("resultView").classList.add("hidden");
+  $("quizView").classList.remove("hidden");
   showQuestion();
 }
 
-/* ===============================
-   イベント
-================================ */
-document.getElementById("startBtn").onclick=()=>{
-  const s=normalizeYear(startYear.value);
-  const e=normalizeYear(endYear.value);
-  useRandom=document.getElementById("randomToggle").checked;
-  const filtered=QUESTIONS.filter(q=>{
+/* ========= イベント ========= */
+$("startBtn").onclick=()=>{
+  const s=normalize($("startYear").value);
+  const e=normalize($("endYear").value);
+  useRandom=$("randomToggle").checked;
+  const filtered=ALL.filter(q=>{
     if(s!==null && q.year<s) return false;
     if(e!==null && q.year>e) return false;
     return true;
   });
   if(filtered.length===0){
-    startMessage.textContent="該当する問題がありません";
-    startMessage.className="msg ng";
-    startMessage.style.display="block";
+    $("startMsg").className="msg ng";
+    $("startMsg").textContent="該当する問題がありません";
+    $("startMsg").style.display="block";
     return;
   }
-  startQuiz(filtered);
+  start(filtered);
 };
-document.getElementById("startAllRangeBtn").onclick=()=>{
-  useRandom=document.getElementById("randomToggle").checked;
-  startQuiz(QUESTIONS);
+$("startAllBtn").onclick=()=>{
+  useRandom=$("randomToggle").checked;
+  start(ALL);
 };
-document.getElementById("retryAllBtn").onclick=()=>startQuiz(pool.map(p=>p));
-document.getElementById("retryWrongBtn").onclick=()=>{
+$("retryAllBtn").onclick=()=>start(pool);
+$("retryWrongBtn").onclick=()=>{
   const ws=[...wrongMap.values()];
-  if(ws.length>0) startQuiz(ws);
+  if(ws.length) start(ws);
 };
-document.getElementById("backToStartBtn").onclick=()=>{
-  document.getElementById("resultView").classList.add("hidden");
-  document.getElementById("startView").classList.remove("hidden");
+$("backBtn").onclick=()=>{
+  $("resultView").classList.add("hidden");
+  $("startView").classList.remove("hidden");
 };
-document.getElementById("checkBtn").onclick=checkAnswer;
-document.getElementById("quitBtn").onclick=finishQuiz;
+$("checkBtn").onclick=check;
+$("quitBtn").onclick=finish;
 document.addEventListener("keydown",e=>{
-  if(e.key==="Enter" && !document.getElementById("quizView").classList.contains("hidden")){
-    checkAnswer();
-  }
+  if(e.key==="Enter" && !$("quizView").classList.contains("hidden")) check();
 });
 
 /* 初期表示 */
-document.getElementById("totalQuestions").textContent=QUESTIONS.length;
+$("totalCount").textContent = ALL.length;
 </script>
 </body>
 </html>
