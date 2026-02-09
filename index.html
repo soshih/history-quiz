@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>歴史 年号クイズ - 魔法の修行 v3.2</title>
+  <title>歴史 年号クイズ - 魔法の修行 v4.0</title>
   <style>
     :root{
       --bg:#f6f7fb;
@@ -386,6 +386,7 @@ const LEVEL_TITLES = {
 
 const LS_STATS_KEY = "hpHistoryQuiz_stats_v1";
 const LS_PREF_KEY  = "hpHistoryQuiz_prefs_v1";
+const LS_SUMMARY_KEY = "hpHistoryQuiz_summary_v1";
 
 /* 旧バージョンで使っていそうなキー（残骸対策）
    ※もし別キーを過去に使っていたならここに足していけばOK */
@@ -419,8 +420,26 @@ function savePrefs(p){
   try{ localStorage.setItem(LS_PREF_KEY, JSON.stringify(p)); }catch(e){}
 }
 
+function loadSummary(){
+  try{
+    const raw = localStorage.getItem(LS_SUMMARY_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    if(!obj || typeof obj !== "object") return {};
+    return {
+      streakDays: Number.isFinite(obj.streakDays) ? obj.streakDays : 0,
+      totalAttempts: Number.isFinite(obj.totalAttempts) ? obj.totalAttempts : 0,
+      accuracyRate: Number.isFinite(obj.accuracyRate) ? obj.accuracyRate : 0,
+      updatedAt: typeof obj.updatedAt === "string" ? obj.updatedAt : null,
+    };
+  }catch(e){ return {}; }
+}
+function saveSummary(summary){
+  try{ localStorage.setItem(LS_SUMMARY_KEY, JSON.stringify(summary)); }catch(e){}
+}
+
 let stats = loadStats();
 let prefs = loadPrefs();
+let summary = loadSummary();
 
 let pool = [];
 let index = 0;
@@ -607,8 +626,23 @@ function overallAggregateAll(){
   return { totalAttempt, totalCorrect, totalWrong, maxStreak, touched };
 }
 
+function recomputeAndSaveSummary(){
+  const all = overallAggregateAll();
+  const totalAttempts = all.totalAttempt;
+  const accuracyRate = totalAttempts ? Math.round((all.totalCorrect / totalAttempts) * 100) : 0;
+  summary = {
+    streakDays: all.maxStreak,
+    totalAttempts,
+    accuracyRate,
+    updatedAt: new Date().toISOString(),
+  };
+  saveSummary(summary);
+  return summary;
+}
+
+
 /* ======================================================
-   ★ v3.3：レベル計算を「マスター数ベース」に変更
+   ★ v4.0：レベル計算を「マスター数ベース」に変更
    - 各問題の得意度が「🏆 マスター」の件数で計算
    - 1問もマスターがなければLv1
    - 全問題マスターで必ずLv30
@@ -739,16 +773,14 @@ function updateBanner(){
   const c = agg.totalCorrect;
   const rate = a ? Math.round((c/a)*100) : 0;
 
-  const aAll = all.totalAttempt;
-  const cAll = all.totalCorrect;
-  const mastered = countMastered();
+  const currentSummary = recomputeAndSaveSummary();
 
   $("overallTitleBadge").textContent = `総合：${overallTitleText(level)}`;
   $("overallRateBadge").textContent  = `正答率：${rate}%`;
 
-  $("streakBadge").textContent = `連続成功日：${Math.max(agg.maxStreak, all.maxStreak)}`;
+  $("streakBadge").textContent = `連続勉強日数：${currentSummary.streakDays}日`;
 
-  $("totalBadge").textContent = `累計：評価 ${c}/${a}（attempt≥3） / 全体 ${cAll}/${aAll} / マスター ${mastered}/${ALL.length}`;
+  $("totalBadge").textContent = `学習ログ：回答 ${currentSummary.totalAttempts}回 / 正答率 ${currentSummary.accuracyRate}%`;
 
   for(let i=1;i<=30;i++){
     const el = $("seg"+i);
@@ -992,12 +1024,15 @@ function renderNotebook(){
 function softReset(){
   stats = {};
   saveStats(stats);
+  summary = { streakDays:0, totalAttempts:0, accuracyRate:0, updatedAt:new Date().toISOString() };
+  saveSummary(summary);
   updateBanner();
 }
 function hardReset(){
   // 現行キー削除
   try{ localStorage.removeItem(LS_STATS_KEY); }catch(e){}
   try{ localStorage.removeItem(LS_PREF_KEY); }catch(e){}
+  try{ localStorage.removeItem(LS_SUMMARY_KEY); }catch(e){}
 
   // 旧キーも削除
   for(const k of LEGACY_KEYS){
@@ -1172,6 +1207,9 @@ $("questionCount").value = questionCount ?? "";
 
 normalizeAllStatsByDay();
 saveStats(stats);
+if(!Number.isFinite(summary.streakDays) || !Number.isFinite(summary.totalAttempts) || !Number.isFinite(summary.accuracyRate)){
+  recomputeAndSaveSummary();
+}
 
 updateBanner();
 showView("startView");
