@@ -148,10 +148,44 @@
     .right{display:flex;justify-content:flex-end}
     .mono{font-variant-numeric:tabular-nums}
     .fx-canvas{position:fixed;inset:0;pointer-events:none;z-index:9999;}
+    .levelup-toast{
+      position:fixed;
+      left:50%; top:16%;
+      transform:translate(-50%, -8px) scale(.94);
+      min-width:min(92vw, 560px);
+      max-width:min(92vw, 620px);
+      padding:16px 18px;
+      border-radius:16px;
+      background:linear-gradient(135deg, rgba(17,24,39,.96), rgba(15,23,42,.92));
+      color:#fff;
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow:0 16px 42px rgba(15,23,42,.45);
+      z-index:10000;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .2s ease;
+    }
+    .levelup-toast.show{
+      opacity:1;
+      animation:levelup-pop 2.2s ease both;
+    }
+    .levelup-title{font-size:24px;font-weight:800;letter-spacing:.4px}
+    .levelup-sub{margin-top:6px;font-size:16px;color:rgba(255,255,255,.95)}
+    .levelup-note{margin-top:8px;font-size:13px;color:rgba(255,255,255,.78)}
+    @keyframes levelup-pop{
+      0%{transform:translate(-50%,-14px) scale(.9);opacity:0}
+      16%{transform:translate(-50%,0) scale(1.04);opacity:1}
+      30%{transform:translate(-50%,0) scale(1);opacity:1}
+      85%{transform:translate(-50%,0) scale(1);opacity:1}
+      100%{transform:translate(-50%,-10px) scale(.98);opacity:0}
+    }
+
   </style>
 </head>
 <body>
 <canvas id="fxCanvas" class="fx-canvas" aria-hidden="true"></canvas>
+<div id="levelupToast" class="levelup-toast" aria-live="polite" aria-atomic="true"></div>
+
 <div class="wrap">
   <div class="card">
 
@@ -455,6 +489,8 @@ let questionCount = Number.isInteger(prefs.questionCount) && prefs.questionCount
 let currentBaseIds = null;
 let lastOverallLevel = null;
 let confettiTimer = null;
+let levelToastTimer = null;
+
 
 const $ = id => document.getElementById(id);
 
@@ -759,6 +795,40 @@ function runLevelUpConfetti(){
   confettiTimer = requestAnimationFrame(draw);
 }
 
+function levelUpMessage(level){
+  if(level <= 10) return "いい流れです。この調子で基礎を固めよう！";
+  if(level <= 20) return "安定してきました。次はミスを減らして一段上へ！";
+  if(level <= 29) return "素晴らしい精度です。マスターまであと少し！";
+  return "お見事！ここまで来たあなたは歴史年号のマスターです。";
+}
+
+function showLevelUpToast(prevLevel, nextLevel){
+  const el = $("levelupToast");
+  if(!el) return;
+
+  const t = LEVEL_TITLES[nextLevel] || LEVEL_TITLES[1];
+  el.innerHTML = `
+    <div class="levelup-title">🎉 レベルアップ！ Lv${prevLevel} → Lv${nextLevel}</div>
+    <div class="levelup-sub">${t.icon} ${t.group}「${t.title}」に到達！</div>
+    <div class="levelup-note">${levelUpMessage(nextLevel)}</div>
+  `;
+
+  if(levelToastTimer){
+    clearTimeout(levelToastTimer);
+    levelToastTimer = null;
+  }
+
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+
+  levelToastTimer = setTimeout(()=>{
+    el.classList.remove("show");
+    levelToastTimer = null;
+  }, 2200);
+}
+
+
 function updateBanner(){
   const agg = overallAggregate();
   const all = overallAggregateAll();
@@ -766,6 +836,8 @@ function updateBanner(){
   const level = computeOverallLevel();
   if(lastOverallLevel !== null && level > lastOverallLevel){
     runLevelUpConfetti();
+    showLevelUpToast(lastOverallLevel, level);
+
   }
   lastOverallLevel = level;
 
